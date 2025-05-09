@@ -378,24 +378,25 @@ def display_economic_analysis():
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
-                npv_color = "green" if results['npv'] > 0 else "red"
-                st.metric("Net Present Value", f"{results['npv']:.1f} M EGP", delta_color=npv_color)
+                npv_delta = f"{results['npv']:.1f} vs threshold"
+                st.metric("Net Present Value", f"{results['npv']:.1f} M EGP", delta=npv_delta, delta_color="normal" if results['npv'] > 0 else "inverse")
             
             with col2:
-                bcr_color = "green" if results['bcr'] > 1 else "red"
-                st.metric("Benefit-Cost Ratio", f"{results['bcr']:.2f}", delta_color=bcr_color)
+                bcr_delta = f"{results['bcr'] - 1:.2f} vs threshold"
+                st.metric("Benefit-Cost Ratio", f"{results['bcr']:.2f}", delta=bcr_delta, delta_color="normal" if results['bcr'] > 1 else "inverse")
             
             with col3:
-                irr_color = "green" if results['irr'] > 0.1 else "red"
-                st.metric("Internal Rate of Return", f"{results['irr']*100:.1f}%", delta_color=irr_color)
+                irr_delta = f"{(results['irr'] - 0.1) * 100:.1f}% vs threshold"
+                st.metric("Internal Rate of Return", f"{results['irr']*100:.1f}%", delta=irr_delta, delta_color="normal" if results['irr'] > 0.1 else "inverse")
             
             with col4:
-                payback_color = "green" if results['payback_period'] < 15 else "red"
                 if results['payback_period'] > 100:
                     payback_text = "Never"
+                    payback_delta = "Exceeds threshold"
                 else:
                     payback_text = f"{results['payback_period']:.1f} years"
-                st.metric("Payback Period", payback_text, delta_color=payback_color)
+                    payback_delta = f"{15 - results['payback_period']:.1f} years vs threshold"
+                st.metric("Payback Period", payback_text, delta=payback_delta, delta_color="normal" if results['payback_period'] < 15 else "inverse")
             
             # Costs breakdown
             st.subheader("Project Costs Breakdown")

@@ -217,41 +217,73 @@ def run_a_star(G, emergency_location, target_hospital, neighborhoods, facilities
         path_edges: List of edges in the path
         results: Dictionary with additional information
     """
-    # Create a copy of the graph for emergency routing
+    # First, make sure the hospital IDs are valid
+    hospital_ids = []
+    for facility in facilities:
+        if facility['type'] == 'Medical':
+            hospital_ids.append(facility['id'])
+    
+    if not hospital_ids:
+        hospital_ids = ["F9", "F10"]  # Fallback to default if no medical facilities found
+    
+    # Step 1: Check if the emergency location has any path to a hospital in the original graph
+    original_graph = G.copy()
+    has_any_path = False
+    for hospital_id in hospital_ids:
+        try:
+            if nx.has_path(original_graph, source=emergency_location, target=hospital_id):
+                has_any_path = True
+                break
+        except Exception as e:
+            print(f"Path check error: {str(e)}")
+            continue
+    
+    if not has_any_path:
+        # Critical situation: No path exists even in the original graph
+        return None, float('inf'), [], {"error": "No path exists to any hospital in the network"}
+    
+    # Step 2: Create a copy of the graph for emergency routing
     emergency_graph = G.copy()
     
-    # Apply road condition preference but don't remove edges if there's only one path
+    # Step 3: First attempt - try with the specified min_road_condition
     edges_to_remove = []
     for u, v, data in emergency_graph.edges(data=True):
-        if data.get('condition', 0) < min_road_condition:
+        condition = data.get('condition', 0)
+        if condition < min_road_condition:
             edges_to_remove.append((u, v))
     
-    # Check if removing edges would disconnect emergency location from hospitals
+    # Check if removing edges would disconnect all paths to hospitals
     temp_graph = emergency_graph.copy()
     for u, v in edges_to_remove:
-        temp_graph.remove_edge(u, v)
+        if (u, v) in temp_graph.edges():
+            temp_graph.remove_edge(u, v)
     
-    # If there's no path to any hospital after removing edges, use the original graph with warnings
-    has_path_to_hospital = False
-    for hospital_id in ["F9", "F10"]:  # Hospital IDs
+    # Check if a path still exists to any hospital
+    path_exists_with_conditions = False
+    reachable_hospital = None
+    
+    for hospital_id in hospital_ids:
         try:
             if nx.has_path(temp_graph, source=emergency_location, target=hospital_id):
-                has_path_to_hospital = True
+                path_exists_with_conditions = True
+                reachable_hospital = hospital_id
                 break
-        except:
-            pass
+        except Exception as e:
+            print(f"Temporary path check error: {str(e)}")
+            continue
     
-    if has_path_to_hospital:
+    # If there's still a path with the condition check, use that graph
+    if path_exists_with_conditions:
         # Safe to remove poor condition roads
         for u, v in edges_to_remove:
-            emergency_graph.remove_edge(u, v)
+            if (u, v) in emergency_graph.edges():
+                emergency_graph.remove_edge(u, v)
     else:
-        # If removing edges would disconnect all paths, don't filter by condition
-        # Instead, apply penalty to poor condition roads
+        # Plan B: We need to keep some poor condition roads, but penalize them
         for u, v, data in emergency_graph.edges(data=True):
             condition = data.get('condition', 5)
             if condition < min_road_condition:
-                # Apply penalty instead of removing
+                # Apply a penalty instead of removing
                 penalty_factor = 1 + ((min_road_condition - condition) / 5)
                 if 'distance' in data:
                     emergency_graph[u][v]['distance'] *= penalty_factor
