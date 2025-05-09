@@ -220,14 +220,41 @@ def run_a_star(G, emergency_location, target_hospital, neighborhoods, facilities
     # Create a copy of the graph for emergency routing
     emergency_graph = G.copy()
     
-    # Filter out roads with poor condition
+    # Apply road condition preference but don't remove edges if there's only one path
     edges_to_remove = []
     for u, v, data in emergency_graph.edges(data=True):
         if data.get('condition', 0) < min_road_condition:
             edges_to_remove.append((u, v))
     
+    # Check if removing edges would disconnect emergency location from hospitals
+    temp_graph = emergency_graph.copy()
     for u, v in edges_to_remove:
-        emergency_graph.remove_edge(u, v)
+        temp_graph.remove_edge(u, v)
+    
+    # If there's no path to any hospital after removing edges, use the original graph with warnings
+    has_path_to_hospital = False
+    for hospital_id in ["F9", "F10"]:  # Hospital IDs
+        try:
+            if nx.has_path(temp_graph, source=emergency_location, target=hospital_id):
+                has_path_to_hospital = True
+                break
+        except:
+            pass
+    
+    if has_path_to_hospital:
+        # Safe to remove poor condition roads
+        for u, v in edges_to_remove:
+            emergency_graph.remove_edge(u, v)
+    else:
+        # If removing edges would disconnect all paths, don't filter by condition
+        # Instead, apply penalty to poor condition roads
+        for u, v, data in emergency_graph.edges(data=True):
+            condition = data.get('condition', 5)
+            if condition < min_road_condition:
+                # Apply penalty instead of removing
+                penalty_factor = 1 + ((min_road_condition - condition) / 5)
+                if 'distance' in data:
+                    emergency_graph[u][v]['distance'] *= penalty_factor
     
     # If target hospital not specified, find nearest hospital
     hospital_ids = ["F9", "F10"]  # IDs of hospitals in the dataset

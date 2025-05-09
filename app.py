@@ -21,6 +21,7 @@ from src.algorithms.shortestpath import run_dijkstra, run_a_star
 from src.algorithms.dp import run_transit_optimization
 from src.algorithms.greedy import run_greedy_algorithm
 from src.visualization.network import create_base_map, visualize_solution
+from src.utils.export import export_to_csv, export_to_json, export_plot_to_png, export_map_to_html, export_report_to_html
 
 # Page config
 st.set_page_config(
@@ -29,6 +30,77 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# User Authentication Functions
+def init_session_state():
+    """Initialize session state variables for authentication"""
+    if 'authenticated' not in st.session_state:
+        st.session_state.authenticated = False
+    if 'username' not in st.session_state:
+        st.session_state.username = ""
+    if 'user_data' not in st.session_state:
+        st.session_state.user_data = {}
+    if 'users' not in st.session_state:
+        # Sample users for demo purposes
+        st.session_state.users = {
+            "admin": {"password": "admin123", "saved_analyses": {}, "preferences": {}},
+            "planner": {"password": "cairo123", "saved_analyses": {}, "preferences": {}},
+            "guest": {"password": "guest", "saved_analyses": {}, "preferences": {}}
+        }
+    if 'selected_algorithm' not in st.session_state:
+        st.session_state.selected_algorithm = None
+
+def login_page():
+    """Display login form and handle authentication"""
+    st.title("Smart City Transportation Network Optimization")
+    
+    st.markdown("""
+    Welcome to the Greater Cairo Transportation Network Optimization System.
+    Please log in to access the full features.
+    """)
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        with st.form("login_form"):
+            username = st.text_input("Username")
+            password = st.text_input("Password", type="password")
+            submit = st.form_submit_button("Log In")
+            
+            if submit:
+                if username in st.session_state.users and st.session_state.users[username]["password"] == password:
+                    st.session_state.authenticated = True
+                    st.session_state.username = username
+                    st.session_state.user_data = st.session_state.users[username]
+                    st.rerun()
+                else:
+                    st.error("Invalid username or password")
+        
+        st.markdown("**Demo Accounts:**")
+        st.markdown("- Username: admin, Password: admin123")
+        st.markdown("- Username: planner, Password: cairo123")
+        st.markdown("- Username: guest, Password: guest")
+    
+    with col2:
+        st.image("generated-icon.png", width=150)
+
+def save_analysis(analysis_name, algorithm, results):
+    """Save current analysis to user data"""
+    if st.session_state.authenticated:
+        username = st.session_state.username
+        if 'saved_analyses' not in st.session_state.users[username]:
+            st.session_state.users[username]['saved_analyses'] = {}
+        
+        st.session_state.users[username]['saved_analyses'][analysis_name] = {
+            "algorithm": algorithm,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "results": results
+        }
+        
+        # Update session state
+        st.session_state.user_data = st.session_state.users[username]
+        return True
+    return False
 
 def create_data_description():
     st.markdown("""
@@ -57,6 +129,14 @@ def create_data_description():
         """)
 
 def main():
+    # Initialize session state
+    init_session_state()
+    
+    # Display login page if not authenticated
+    if not st.session_state.authenticated:
+        login_page()
+        return
+    
     # Load data
     data = load_data()
     neighborhoods = data['neighborhoods']
@@ -101,6 +181,15 @@ def main():
     # Sidebar
     st.sidebar.header("Cairo Transportation Network Optimization")
     
+    # User info in sidebar
+    st.sidebar.write(f"**Logged in as:** {st.session_state.username}")
+    if st.sidebar.button("Log Out"):
+        st.session_state.authenticated = False
+        st.rerun()
+    
+    st.sidebar.markdown("---")
+    
+    # Algorithm selection
     algorithm = st.sidebar.selectbox(
         "Select Algorithm",
         [
@@ -114,6 +203,26 @@ def main():
     )
     
     st.session_state.selected_algorithm = algorithm
+    
+    # User's saved analyses
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Saved Analyses")
+    
+    if st.session_state.user_data and 'saved_analyses' in st.session_state.user_data:
+        saved_analyses = st.session_state.user_data['saved_analyses']
+        if saved_analyses:
+            analysis_names = list(saved_analyses.keys())
+            selected_analysis = st.sidebar.selectbox("Select Analysis", analysis_names)
+            
+            if st.sidebar.button("Load Analysis"):
+                analysis_data = saved_analyses[selected_analysis]
+                st.sidebar.write(f"Loaded: {selected_analysis}")
+                st.sidebar.write(f"Created: {analysis_data['timestamp']}")
+                st.sidebar.write(f"Algorithm: {analysis_data['algorithm']}")
+        else:
+            st.sidebar.write("No saved analyses yet.")
+    else:
+        st.sidebar.write("No saved analyses yet.")
     
     # Display sections based on selected algorithm
     if algorithm == "Overview":
