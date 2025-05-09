@@ -213,6 +213,9 @@ def main():
             origins = [f"{n['id']} - {n['name']}" for n in neighborhoods] + [f"{f['id']} - {f['name']}" for f in facilities]
             origin = st.selectbox("Select Origin", origins)
             origin_id = origin.split(" - ")[0]
+            # Convert to integer if it's a neighborhood ID
+            if origin_id.isdigit():
+                origin_id = int(origin_id)
         
         with col2:
             destinations = [f"{n['id']} - {n['name']}" for n in neighborhoods] + [f"{f['id']} - {f['name']}" for f in facilities]
@@ -280,7 +283,7 @@ def main():
         # Emergency location selection
         emergency_locations = [f"{n['id']} - {n['name']}" for n in neighborhoods]
         emergency_location = st.selectbox("Select Emergency Location", emergency_locations)
-        emergency_id = emergency_location.split(" - ")[0]
+        emergency_id = int(emergency_location.split(" - ")[0])
         
         # Hospital preference
         hospital_options = [f['id'] for f in facilities if f['type'] == 'Medical']
