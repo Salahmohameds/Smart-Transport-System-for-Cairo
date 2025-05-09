@@ -297,6 +297,29 @@ def main():
                 st.subheader("Roads in the Optimal Network")
                 roads_df = pd.DataFrame(results["selected_roads"])
                 st.dataframe(roads_df)
+                
+                # Export section
+                st.subheader("Export Results")
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("### Export Data")
+                    st.markdown(export_to_csv(roads_df, "mst_roads.csv"), unsafe_allow_html=True)
+                    st.markdown(export_to_json(results, "mst_results.json"), unsafe_allow_html=True)
+                
+                with col2:
+                    st.markdown("### Export Map & Report")
+                    st.markdown(export_map_to_html(mst_map, "mst_map.html"), unsafe_allow_html=True)
+                    st.markdown(export_report_to_html("Infrastructure Network Design", results, "mst_report.html"), unsafe_allow_html=True)
+                
+                # Save analysis option
+                with st.expander("Save Analysis"):
+                    analysis_name = st.text_input("Analysis Name", value=f"MST Analysis - {datetime.now().strftime('%Y-%m-%d')}")
+                    if st.button("Save to Profile"):
+                        if save_analysis(analysis_name, "Infrastructure Network Design (MST)", results):
+                            st.success(f"Analysis '{analysis_name}' saved successfully!")
+                        else:
+                            st.error("Failed to save analysis.")
     
     elif algorithm == "Traffic Flow Optimization (Dijkstra)":
         st.title("Traffic Flow Optimization")
@@ -387,6 +410,32 @@ def main():
                             st.subheader("Route Details")
                             route_details = results["route_details"]
                             st.table(route_details)
+                            
+                            # Export section
+                            st.subheader("Export Results")
+                            col1, col2 = st.columns(2)
+                            
+                            with col1:
+                                st.markdown("### Export Data")
+                                route_df = pd.DataFrame(route_details)
+                                st.markdown(export_to_csv(route_df, "route_details.csv"), unsafe_allow_html=True)
+                                st.markdown(export_to_json(results, "route_results.json"), unsafe_allow_html=True)
+                            
+                            with col2:
+                                st.markdown("### Export Map & Report")
+                                st.markdown(export_map_to_html(route_map, "route_map.html"), unsafe_allow_html=True)
+                                st.markdown(export_plot_to_png(fig, "time_comparison.png"), unsafe_allow_html=True)
+                                st.markdown(export_report_to_html("Traffic Flow Optimization", results, "route_report.html"), unsafe_allow_html=True)
+                            
+                            # Save analysis option
+                            with st.expander("Save Analysis"):
+                                analysis_name = st.text_input("Analysis Name", 
+                                                            value=f"Route {origin.split(' - ')[1]} to {destination.split(' - ')[1]} - {datetime.now().strftime('%Y-%m-%d')}")
+                                if st.button("Save to Profile"):
+                                    if save_analysis(analysis_name, "Traffic Flow Optimization (Dijkstra)", results):
+                                        st.success(f"Analysis '{analysis_name}' saved successfully!")
+                                    else:
+                                        st.error("Failed to save analysis.")
                         else:
                             st.error("No path found between selected points")
                     except Exception as e:
@@ -474,6 +523,33 @@ def main():
                     st.subheader("Route Details")
                     route_details = results["route_details"]
                     st.table(route_details)
+                    
+                    # Export section
+                    st.subheader("Export Results")
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.markdown("### Export Data")
+                        route_df = pd.DataFrame(route_details)
+                        st.markdown(export_to_csv(route_df, "emergency_route_details.csv"), unsafe_allow_html=True)
+                        st.markdown(export_to_json(results, "emergency_results.json"), unsafe_allow_html=True)
+                    
+                    with col2:
+                        st.markdown("### Export Map & Report")
+                        st.markdown(export_map_to_html(route_map, "emergency_route_map.html"), unsafe_allow_html=True)
+                        st.markdown(export_plot_to_png(fig, "emergency_comparison.png"), unsafe_allow_html=True)
+                        st.markdown(export_report_to_html("Emergency Response Planning", results, "emergency_report.html"), unsafe_allow_html=True)
+                    
+                    # Save analysis option
+                    with st.expander("Save Analysis"):
+                        location_name = emergency_location.split(" - ")[1]
+                        analysis_name = st.text_input("Analysis Name", 
+                                                    value=f"Emergency Route from {location_name} - {datetime.now().strftime('%Y-%m-%d')}")
+                        if st.button("Save to Profile"):
+                            if save_analysis(analysis_name, "Emergency Response Planning (A*)", results):
+                                st.success(f"Analysis '{analysis_name}' saved successfully!")
+                            else:
+                                st.error("Failed to save analysis.")
                 else:
                     st.error("No suitable emergency route found. Try lowering the minimum road condition.")
             except Exception as e:
@@ -630,6 +706,34 @@ def main():
                 if optimize_transfers:
                     st.subheader("Metro-Bus Transfer Points")
                     st.table(results["transfer_points"])
+                
+                # Export section
+                st.subheader("Export Results")
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("### Export Data")
+                    bus_allocation_df = pd.DataFrame(results["bus_allocation"])
+                    waiting_times_df = pd.DataFrame(results["waiting_times"])
+                    st.markdown(export_to_csv(bus_allocation_df, "bus_allocation.csv"), unsafe_allow_html=True)
+                    st.markdown(export_to_csv(waiting_times_df, "waiting_times.csv"), unsafe_allow_html=True)
+                    st.markdown(export_to_json(results, "transit_results.json"), unsafe_allow_html=True)
+                
+                with col2:
+                    st.markdown("### Export Map & Visualizations")
+                    st.markdown(export_map_to_html(transit_map, "transit_network_map.html"), unsafe_allow_html=True)
+                    st.markdown(export_plot_to_png(fig, "waiting_times_chart.png"), unsafe_allow_html=True)
+                    st.markdown(export_report_to_html("Public Transit Optimization", results, "transit_report.html"), unsafe_allow_html=True)
+                
+                # Save analysis option
+                with st.expander("Save Analysis"):
+                    analysis_name = st.text_input("Analysis Name", 
+                                                value=f"Transit Optimization ({total_buses} buses) - {datetime.now().strftime('%Y-%m-%d')}")
+                    if st.button("Save to Profile"):
+                        if save_analysis(analysis_name, "Public Transit Optimization (DP)", results):
+                            st.success(f"Analysis '{analysis_name}' saved successfully!")
+                        else:
+                            st.error("Failed to save analysis.")
     
     elif algorithm == "Traffic Signal Optimization (Greedy)":
         st.title("Traffic Signal Optimization")
@@ -749,7 +853,7 @@ def main():
                 st.subheader("Traffic Flow by Direction")
                 traffic_data = results["traffic_data"]
                 
-                fig = px.bar(
+                flow_fig = px.bar(
                     traffic_data,
                     x="road",
                     y="flow",
@@ -757,7 +861,39 @@ def main():
                     labels={"road": "Road", "flow": "Traffic Flow (vehicles per hour)"},
                     title="Directional Traffic Flow"
                 )
-                st.plotly_chart(fig)
+                st.plotly_chart(flow_fig)
+                
+                # Export section
+                st.subheader("Export Results")
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("### Export Data")
+                    # Convert signal plan to dataframe
+                    signal_df = pd.DataFrame([
+                        {"road": road, "green_time": data["green_time"], "red_time": data["red_time"]}
+                        for road, data in signal_plan.items()
+                    ])
+                    traffic_df = pd.DataFrame(traffic_data)
+                    st.markdown(export_to_csv(signal_df, "signal_timing.csv"), unsafe_allow_html=True)
+                    st.markdown(export_to_csv(traffic_df, "traffic_flow.csv"), unsafe_allow_html=True)
+                    st.markdown(export_to_json(results, "signal_results.json"), unsafe_allow_html=True)
+                
+                with col2:
+                    st.markdown("### Export Visualizations")
+                    st.markdown(export_plot_to_png(fig, "signal_timing_chart.png"), unsafe_allow_html=True)
+                    st.markdown(export_plot_to_png(flow_fig, "traffic_flow_chart.png"), unsafe_allow_html=True)
+                    st.markdown(export_report_to_html("Traffic Signal Optimization", results, "signal_report.html"), unsafe_allow_html=True)
+                
+                # Save analysis option
+                with st.expander("Save Analysis"):
+                    analysis_name = st.text_input("Analysis Name", 
+                                                value=f"Signal Timing for {selected_intersection_data['name']} - {datetime.now().strftime('%Y-%m-%d')}")
+                    if st.button("Save to Profile"):
+                        if save_analysis(analysis_name, "Traffic Signal Optimization (Greedy)", results):
+                            st.success(f"Analysis '{analysis_name}' saved successfully!")
+                        else:
+                            st.error("Failed to save analysis.")
 
 if __name__ == "__main__":
     main()
