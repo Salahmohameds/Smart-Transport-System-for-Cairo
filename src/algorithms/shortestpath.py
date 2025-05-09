@@ -252,7 +252,11 @@ def run_a_star(G, emergency_location, target_hospital, neighborhoods, facilities
         
         # Find the closest hospital with a valid path
         if distances:
-            target_hospital_id = min(distances, key=distances.get)
+            min_distance = float('inf')
+            for hosp_id, dist in distances.items():
+                if dist < min_distance:
+                    min_distance = dist
+                    target_hospital_id = hosp_id
         else:
             return None, float('inf'), [], {"error": "No path to any hospital"}
     

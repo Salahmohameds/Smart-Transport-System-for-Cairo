@@ -11,6 +11,7 @@ import os
 import base64
 import sys
 import time
+import random
 
 # Add src to the path to import modules
 sys.path.append(os.path.join(os.path.dirname(__file__)))
@@ -392,7 +393,89 @@ def main():
                 # Display results
                 st.subheader("Optimized Bus Allocation")
                 
+                # Create transit network visualization on map
+                transit_map = folium.Map(location=[30.05, 31.25], zoom_start=11)
+                
+                # Add neighborhoods and facilities
+                for n in neighborhoods:
+                    popup_text = f"<b>{n['name']}</b><br>Population: {n['population']:,}"
+                    folium.CircleMarker(
+                        location=[n['y'], n['x']],
+                        radius=8,
+                        color='blue',
+                        fill=True,
+                        fill_color='blue',
+                        fill_opacity=0.7,
+                        popup=popup_text
+                    ).add_to(transit_map)
+                
+                # Add facilities with custom icons
+                for f in facilities:
+                    icon_color = 'darkblue'
+                    if f['type'] == 'Medical':
+                        icon_name = 'plus'
+                        icon_color = 'red'
+                    elif f['type'] == 'Educational':
+                        icon_name = 'book'
+                        icon_color = 'green'
+                    elif f['type'] == 'Transportation':
+                        icon_name = 'subway'
+                        icon_color = 'orange'
+                    else:
+                        icon_name = 'building'
+                    
+                    folium.Marker(
+                        location=[f['y'], f['x']],
+                        popup=f['name'],
+                        icon=folium.Icon(color=icon_color, icon=icon_name, prefix='fa')
+                    ).add_to(transit_map)
+                
+                # Add bus routes with line thickness based on buses allocated
+                for route_data in results["bus_allocation"]:
+                    route_id = route_data["route"]
+                    buses = route_data["buses_allocated"]
+                    line_width = max(2, min(8, buses / 2))  # Scale line width based on buses allocated
+                    
+                    # Get route coordinates from road network (simplified for demo)
+                    # In a real system, you would have actual route coordinates
+                    # Here we're simulating routes as lines between key neighborhoods
+                    if route_id == "Route1":
+                        coords = [[30.05, 31.20], [30.06, 31.25], [30.07, 31.30]]
+                    elif route_id == "Route2":
+                        coords = [[30.03, 31.22], [30.05, 31.25], [30.08, 31.28]]
+                    elif route_id == "Route3":
+                        coords = [[30.02, 31.18], [30.04, 31.23], [30.07, 31.25]]
+                    elif route_id == "Route4":
+                        coords = [[30.06, 31.19], [30.05, 31.25], [30.03, 31.29]]
+                    elif route_id == "Route5":
+                        coords = [[30.04, 31.30], [30.05, 31.25], [30.09, 31.22]]
+                    else:
+                        coords = [[30.05, 31.20], [30.05, 31.25], [30.05, 31.30]]
+                    
+                    folium.PolyLine(
+                        locations=coords,
+                        color='red',
+                        weight=line_width,
+                        opacity=0.8,
+                        popup=f"Route: {route_data['route_name']}, Buses: {buses}"
+                    ).add_to(transit_map)
+                
+                # Add transfer points if optimized
+                if optimize_transfers:
+                    for transfer in results["transfer_points"]:
+                        folium.Marker(
+                            # Simulated location for demo purposes
+                            location=[30.04 + random.uniform(-0.02, 0.02), 31.25 + random.uniform(-0.05, 0.05)],
+                            popup=f"Transfer Point: {transfer['station']}<br>Metro Lines: {transfer['metro_lines']}<br>Bus Routes: {transfer['bus_routes']}",
+                            icon=folium.Icon(color='purple', icon='exchange', prefix='fa')
+                        ).add_to(transit_map)
+                
+                # Display the map
+                st.subheader("Transit Network Map")
+                folium_static(transit_map, width=1000, height=600)
+                
                 # Bus allocation chart
+                st.subheader("Bus Allocation by Route")
                 fig = px.bar(
                     results["bus_allocation"],
                     x="route",
