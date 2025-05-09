@@ -1,0 +1,373 @@
+do this project and don't forget anything
+Smart City Transportation Network Optimization Project - Detailed Prompt
+Project Overview
+You will create a comprehensive transportation optimization system for Greater Cairo using the exact data provided in Project_Provided_Data.pdf. The system will implement multiple algorithmic approaches to solve urban transportation challenges while strictly using only the neighborhoods, facilities, roads, and transit data from the provided dataset.
+
+Data Structures (Must Use Provided Data Only)
+Graph Representation
+Nodes: Represent all 15 neighborhoods (IDs 1-15) and 10 facilities (F1-F10)
+
+Edges: Represent all existing roads (page 2) and potential new roads (page 3)
+
+Attributes:
+
+For neighborhoods: ID, name, population, type, coordinates
+
+For facilities: ID, name, type, coordinates
+
+For roads: distance, capacity, condition (existing) or cost (potential)
+
+Temporal Data Structure
+Store traffic flow patterns (page 3-4) with time slots:
+
+Morning Peak (7-9 AM)
+
+Afternoon (12-2 PM)
+
+Evening Peak (5-7 PM)
+
+Night (10 PM-5 AM)
+
+Required Algorithm Implementations
+1. Infrastructure Network Design (MST)
+Input: All existing and potential roads from pages 2-3
+Tasks:
+
+Implement Kruskal's algorithm to find MST considering:
+
+Construction costs for new roads (page 3)
+
+Maintenance costs (inverse of condition score for existing roads)
+
+Priority connections:
+
+Between high-population areas (Nasr City, Giza, Shubra)
+
+To critical facilities (hospitals F9-F10, airport F1)
+
+Output:
+
+Visualization showing selected roads (existing + new)
+
+Total cost calculation
+
+Connectivity analysis (all nodes reachable?)
+
+2. Traffic Flow Optimization (Shortest Path)
+Input: Road network with time-varying capacities (page 4)
+Tasks:
+
+Implement Dijkstra's with time-dependent weights:
+
+Morning/evening peaks: use peak capacity values
+
+Other times: use standard values
+
+Example routes to optimize:
+
+Maadi (1) → Downtown Cairo (3) during morning peak
+
+New Cairo (4) → Giza (8) in evening
+
+6th October City (7) → Heliopolis (5) at night
+
+Output:
+
+Time-dependent shortest paths
+
+Congestion analysis (compare peak vs off-peak travel times)
+
+3. Emergency Response Planning (A* Search)
+Input: Road network + medical facilities (F9-F10)
+Tasks:
+
+Implement A* with heuristic:
+
+Euclidean distance from current node to target hospital
+
+Priority for roads with better condition (higher score)
+
+Emergency scenarios:
+
+Accident in Zamalek (6) → nearest hospital (Qasr El Aini F9)
+
+Emergency in Helwan (12) → nearest hospital
+
+Output:
+
+Emergency routes with estimated times
+
+Comparison with normal routing
+
+4. Public Transit Optimization (Dynamic Programming)
+Input:
+
+Current metro lines (page 4)
+
+Bus routes (page 4-5)
+
+Demand data (page 5)
+
+Tasks:
+
+DP solution for bus scheduling:
+
+Allocate buses to routes based on demand (B1-B10)
+
+Minimize waiting time for high-demand routes:
+
+Line 1 (M1) - 1.5M daily passengers
+
+Route B2 - 42,000 daily passengers
+
+Metro-bus integration:
+
+Optimize transfers at key stations (F2, 3, 11)
+
+Output:
+
+Optimized schedule showing bus allocations
+
+Transfer improvement analysis
+
+5. greedy algorithm
+
+Implementation Requirements
+Code Structure
+/src
+  /algorithms
+    mst.py         # Kruskal's/Prim's implementation
+    shortestpath.py # Dijkstra's and A*
+    dp.py          # Public transit optimization
+    greedy.py      # Traffic signal optimization
+  /data
+    loader.py      # Parse all data from Project_Provided_Data.pdf
+  /visualization
+    network.py     # Draw road network and solutions
+Visualization Requirements
+Base map with all neighborhoods and facilities
+
+MST solution overlay
+
+Shortest path highlighting
+
+Public transit routes (metro + bus)
+
+Deliverables Checklist
+Complete Source Code:
+
+All algorithms implemented
+
+Data loading from provided dataset
+
+Visualization components
+
+Technical Report (5-7 pages):
+
+Section for each algorithm with:
+
+Implementation details
+
+Complexity analysis
+
+Results on provided data
+
+Challenges faced
+
+Visualizations of key solutions
+
+Demo:
+
+Show functionality with Cairo data
+
+Demonstrate all four optimization scenarios
+
+Include visual outputs
+
+Example Test Cases (Using Provided Data)
+MST Test:
+
+Input: All existing + potential roads
+
+Verify: Total cost ≤ 5000 million EGP
+
+Check: All hospitals connected
+
+Emergency Route Test:
+
+From: Nasr City (2)
+
+To: Qasr El Aini (F9)
+
+Verify: Uses roads with condition ≥ 7
+
+Public Transit Test:
+
+Optimize buses for route B2 (highest demand)
+
+Verify: Wait time ≤ 15 minutes during peak
+
+Constraints
+Use ONLY the data from Project_Provided_Data.pdf
+
+No additional neighborhoods/facilities
+
+All coordinates must match provided values
+
+Traffic flows must use exact values from page 3-4
+
+i want it as application like google maps
+use all of this data and don't duplicate
+neighborhoods = [
+    {"id": 1, "name": "Maadi", "population": 250000, "type": "Residential", "x": 31.25, "y": 29.96},
+    {"id": 2, "name": "Nasr City", "population": 500000, "type": "Mixed", "x": 31.34, "y": 30.06},
+    {"id": 3, "name": "Downtown Cairo", "population": 100000, "type": "Business", "x": 31.24, "y": 30.04},
+    {"id": 4, "name": "New Cairo", "population": 300000, "type": "Residential", "x": 31.47, "y": 30.03},
+    {"id": 5, "name": "Heliopolis", "population": 200000, "type": "Mixed", "x": 31.32, "y": 30.09},
+    {"id": 6, "name": "Zamalek", "population": 50000, "type": "Residential", "x": 31.22, "y": 30.06},
+    {"id": 7, "name": "6th October City", "population": 400000, "type": "Mixed", "x": 30.98, "y": 29.93},
+    {"id": 8, "name": "Giza", "population": 550000, "type": "Mixed", "x": 31.21, "y": 29.99},
+    {"id": 9, "name": "Mohandessin", "population": 180000, "type": "Business", "x": 31.20, "y": 30.05},
+    {"id": 10, "name": "Dokki", "population": 220000, "type": "Mixed", "x": 31.21, "y": 30.03},
+    {"id": 11, "name": "Shubra", "population": 450000, "type": "Residential", "x": 31.24, "y": 30.11},
+    {"id": 12, "name": "Helwan", "population": 350000, "type": "Industrial", "x": 31.33, "y": 29.85},
+    {"id": 13, "name": "New Administrative Capital", "population": 50000, "type": "Government", "x": 31.80, "y": 30.02},
+    {"id": 14, "name": "Al Rehab", "population": 120000, "type": "Residential", "x": 31.49, "y": 30.06},
+    {"id": 15, "name": "Sheikh Zayed", "population": 150000, "type": "Residential", "x": 30.94, "y": 30.01}
+]
+
+facilities = [
+    {"id": "F1", "name": "Cairo International Airport", "type": "Airport", "x": 31.41, "y": 30.11},
+    {"id": "F2", "name": "Ramses Railway Station", "type": "Transit Hub", "x": 31.25, "y": 30.06},
+    {"id": "F3", "name": "Cairo University", "type": "Education", "x": 31.21, "y": 30.03},
+    {"id": "F4", "name": "Al-Azhar University", "type": "Education", "x": 31.26, "y": 30.05},
+    {"id": "F5", "name": "Egyptian Museum", "type": "Tourism", "x": 31.23, "y": 30.05},
+    {"id": "F6", "name": "Cairo International Stadium", "type": "Sports", "x": 31.30, "y": 30.07},
+    {"id": "F7", "name": "Smart Village", "type": "Business", "x": 30.97, "y": 30.07},
+    {"id": "F8", "name": "Cairo Festival City", "type": "Commercial", "x": 31.40, "y": 30.03},
+    {"id": "F9", "name": "Qasr El Aini Hospital", "type": "Medical", "x": 31.23, "y": 30.03},
+    {"id": "F10", "name": "Maadi Military Hospital", "type": "Medical", "x": 31.25, "y": 29.95}
+]
+
+existing_roads = [
+    {"from": 1, "to": 3, "distance": 8.5, "capacity": 3000, "condition": 7},
+    {"from": 1, "to": 8, "distance": 6.2, "capacity": 2500, "condition": 6},
+    {"from": 2, "to": 3, "distance": 5.9, "capacity": 2800, "condition": 8},
+    {"from": 2, "to": 5, "distance": 4.0, "capacity": 3200, "condition": 9},
+    {"from": 3, "to": 5, "distance": 6.1, "capacity": 3500, "condition": 7},
+    {"from": 3, "to": 6, "distance": 3.2, "capacity": 2000, "condition": 8},
+    {"from": 3, "to": 9, "distance": 4.5, "capacity": 2600, "condition": 6},
+    {"from": 3, "to": 10, "distance": 3.8, "capacity": 2400, "condition": 7},
+    {"from": 4, "to": 2, "distance": 15.2, "capacity": 3800, "condition": 9},
+    {"from": 4, "to": 14, "distance": 5.3, "capacity": 3000, "condition": 10},
+    {"from": 5, "to": 11, "distance": 7.9, "capacity": 3100, "condition": 7},
+    {"from": 6, "to": 9, "distance": 2.2, "capacity": 1800, "condition": 8},
+    {"from": 7, "to": 8, "distance": 24.5, "capacity": 3500, "condition": 8},
+    {"from": 7, "to": 15, "distance": 9.8, "capacity": 3000, "condition": 9},
+    {"from": 8, "to": 10, "distance": 3.3, "capacity": 2200, "condition": 7},
+    {"from": 8, "to": 12, "distance": 14.8, "capacity": 2600, "condition": 5},
+    {"from": 9, "to": 10, "distance": 2.1, "capacity": 1900, "condition": 7},
+    {"from": 10, "to": 11, "distance": 8.7, "capacity": 2400, "condition": 6},
+    {"from": 11, "to": "F2", "distance": 3.6, "capacity": 2200, "condition": 7},
+    {"from": 12, "to": 1, "distance": 12.7, "capacity": 2800, "condition": 6},
+    {"from": 13, "to": 4, "distance": 45.0, "capacity": 4000, "condition": 10},
+    {"from": 14, "to": 13, "distance": 35.5, "capacity": 3800, "condition": 9},
+    {"from": 15, "to": 7, "distance": 9.8, "capacity": 3000, "condition": 9},
+    {"from": "F1", "to": 5, "distance": 7.5, "capacity": 3500, "condition": 9},
+    {"from": "F1", "to": 2, "distance": 9.2, "capacity": 3200, "condition": 8},
+    {"from": "F2", "to": 3, "distance": 2.5, "capacity": 2000, "condition": 7},
+    {"from": "F7", "to": 15, "distance": 8.3, "capacity": 2800, "condition": 8},
+    {"from": "F8", "to": 4, "distance": 6.1, "capacity": 3000, "condition": 9}
+]
+
+potential_roads = [
+    {"from": 1, "to": 4, "distance": 22.8, "capacity": 4000, "cost": 450},
+    {"from": 1, "to": 14, "distance": 25.3, "capacity": 3800, "cost": 500},
+    {"from": 2, "to": 13, "distance": 48.2, "capacity": 4500, "cost": 950},
+    {"from": 3, "to": 13, "distance": 56.7, "capacity": 4500, "cost": 1100},
+    {"from": 5, "to": 4, "distance": 16.8, "capacity": 3500, "cost": 320},
+    {"from": 6, "to": 8, "distance": 7.5, "capacity": 2500, "cost": 150},
+    {"from": 7, "to": 13, "distance": 82.3, "capacity": 4000, "cost": 1600},
+    {"from": 9, "to": 11, "distance": 6.9, "capacity": 2800, "cost": 140},
+    {"from": 10, "to": "F7", "distance": 27.4, "capacity": 3200, "cost": 550},
+    {"from": 11, "to": 13, "distance": 62.1, "capacity": 4200, "cost": 1250},
+    {"from": 12, "to": 14, "distance": 30.5, "capacity": 3600, "cost": 610},
+    {"from": 14, "to": 5, "distance": 18.2, "capacity": 3300, "cost": 360},
+    {"from": 15, "to": 9, "distance": 22.7, "capacity": 3000, "cost": 450},
+    {"from": "F1", "to": 13, "distance": 40.2, "capacity": 4000, "cost": 800},
+    {"from": "F7", "to": 9, "distance": 26.8, "capacity": 3200, "cost": 540}
+]
+
+traffic_flows = {
+    "1-3": {"morning_peak": 2800, "afternoon": 1500, "evening_peak": 2600, "night": 800},
+    "1-8": {"morning_peak": 2200, "afternoon": 1200, "evening_peak": 2100, "night": 600},
+    "2-3": {"morning_peak": 2700, "afternoon": 1400, "evening_peak": 2500, "night": 700},
+    "2-5": {"morning_peak": 3000, "afternoon": 1600, "evening_peak": 2800, "night": 650},
+    "3-5": {"morning_peak": 3200, "afternoon": 1700, "evening_peak": 3100, "night": 800},
+    "3-6": {"morning_peak": 1800, "afternoon": 1400, "evening_peak": 1900, "night": 500},
+    "3-9": {"morning_peak": 2400, "afternoon": 1300, "evening_peak": 2200, "night": 550},
+    "3-10": {"morning_peak": 2300, "afternoon": 1200, "evening_peak": 2100, "night": 500},
+    "4-2": {"morning_peak": 3600, "afternoon": 1800, "evening_peak": 3300, "night": 750},
+    "4-14": {"morning_peak": 2800, "afternoon": 1600, "evening_peak": 2600, "night": 600},
+    "5-11": {"morning_peak": 2900, "afternoon": 1500, "evening_peak": 2700, "night": 650},
+    "6-9": {"morning_peak": 1700, "afternoon": 1300, "evening_peak": 1800, "night": 450},
+    "7-8": {"morning_peak": 3200, "afternoon": 1700, "evening_peak": 3000, "night": 700},
+    "7-15": {"morning_peak": 2800, "afternoon": 1500, "evening_peak": 2600, "night": 600},
+    "8-10": {"morning_peak": 2000, "afternoon": 1100, "evening_peak": 1900, "night": 450},
+    "8-12": {"morning_peak": 2400, "afternoon": 1300, "evening_peak": 2200, "night": 500},
+    "9-10": {"morning_peak": 1800, "afternoon": 1200, "evening_peak": 1700, "night": 400},
+    "10-11": {"morning_peak": 2200, "afternoon": 1300, "evening_peak": 2100, "night": 500},
+    "11-F2": {"morning_peak": 2100, "afternoon": 1200, "evening_peak": 2000, "night": 450},
+    "12-1": {"morning_peak": 2600, "afternoon": 1400, "evening_peak": 2400, "night": 550},
+    "13-4": {"morning_peak": 3800, "afternoon": 2000, "evening_peak": 3500, "night": 800},
+    "14-13": {"morning_peak": 3600, "afternoon": 1900, "evening_peak": 3300, "night": 750},
+    "15-7": {"morning_peak": 2800, "afternoon": 1500, "evening_peak": 2600, "night": 600},
+    "F1-5": {"morning_peak": 3300, "afternoon": 2200, "evening_peak": 3100, "night": 1200},
+    "F1-2": {"morning_peak": 3000, "afternoon": 2000, "evening_peak": 2800, "night": 1100},
+    "F2-3": {"morning_peak": 1900, "afternoon": 1600, "evening_peak": 1800, "night": 900},
+    "F7-15": {"morning_peak": 2600, "afternoon": 1500, "evening_peak": 2400, "night": 550},
+    "F8-4": {"morning_peak": 2800, "afternoon": 1600, "evening_peak": 2600, "night": 600}
+}
+
+metro_lines = [
+    {"id": "M1", "name": "Line 1 (Helwan-New Marg)", "stations": [12, 1, 3, "F2", 11], "daily_passengers": 1500000},
+    {"id": "M2", "name": "Line 2 (Shubra-Giza)", "stations": [11, "F2", 3, 10, 8], "daily_passengers": 1200000},
+    {"id": "M3", "name": "Line 3 (Airport-Imbaba)", "stations": ["F1", 5, 2, 3, 9], "daily_passengers": 800000}
+]
+
+bus_routes = [
+    {"id": "B1", "stops": [1, 3, 6, 9], "buses": 25, "daily_passengers": 35000},
+    {"id": "B2", "stops": [7, 15, 8, 10, 3], "buses": 30, "daily_passengers": 42000},
+    {"id": "B3", "stops": [2, 5, "F1"], "buses": 20, "daily_passengers": 28000},
+    {"id": "B4", "stops": [4, 14, 2, 3], "buses": 22, "daily_passengers": 31000},
+    {"id": "B5", "stops": [8, 12, 1], "buses": 18, "daily_passengers": 25000},
+    {"id": "B6", "stops": [11, 5, 2], "buses": 24, "daily_passengers": 33000},
+    {"id": "B7", "stops": [13, 4, 14], "buses": 15, "daily_passengers": 21000},
+    {"id": "B8", "stops": ["F7", 15, 7], "buses": 12, "daily_passengers": 17000},
+    {"id": "B9", "stops": [1, 8, 10, 9, 6], "buses": 28, "daily_passengers": 39000},
+    {"id": "B10", "stops": ["F8", 4, 2, 5], "buses": 20, "daily_passengers": 28000}
+]
+
+transit_demand = [
+    {"from": 3, "to": 5, "passengers": 15000},
+    {"from": 1, "to": 3, "passengers": 12000},
+    {"from": 2, "to": 3, "passengers": 18000},
+    {"from": "F2", "to": 11, "passengers": 25000},
+    {"from": "F1", "to": 3, "passengers": 20000},
+    {"from": 7, "to": 3, "passengers": 14000},
+    {"from": 4, "to": 3, "passengers": 16000},
+    {"from": 8, "to": 3, "passengers": 22000},
+    {"from": 3, "to": 9, "passengers": 13000},
+    {"from": 5, "to": 2, "passengers": 17000},
+    {"from": 11, "to": 3, "passengers": 24000},
+    {"from": 12, "to": 3, "passengers": 11000},
+    {"from": 1, "to": 8, "passengers": 9000},
+    {"from": 7, "to": "F7", "passengers": 18000},
+    {"from": 4, "to": "F8", "passengers": 12000},
+    {"from": 13, "to": 3, "passengers": 8000},
+    {"from": 14, "to": 4, "passengers": 7000}
+]
+
+try to make front and backend as full website don't use streamlit
+
+Add celebratory animations for optimal route discoveries
