@@ -61,18 +61,42 @@ def export_plot_to_png(fig, filename):
     Returns:
         Download link HTML
     """
-    buf = BytesIO()
-    if hasattr(fig, 'write_image'):
-        # Plotly figure
-        fig.write_image(buf, format='png')
-    else:
-        # Matplotlib figure
-        fig.savefig(buf, format='png', bbox_inches='tight')
-    
-    buf.seek(0)
-    b64 = base64.b64encode(buf.read()).decode()
-    href = f'<a href="data:image/png;base64,{b64}" download="{filename}">{filename}</a>'
-    return href
+    try:
+        buf = BytesIO()
+        if hasattr(fig, 'write_image'):
+            # Try to directly export Plotly figure
+            # This might fail if kaleido isn't installed
+            try:
+                fig.write_image(buf, format='png')
+                buf.seek(0)
+                b64 = base64.b64encode(buf.read()).decode()
+                href = f'<a href="data:image/png;base64,{b64}" download="{filename}">{filename}</a>'
+                return href
+            except Exception:
+                # Fall back to JSON export if image export fails
+                plot_json = fig.to_json()
+                b64 = base64.b64encode(plot_json.encode()).decode()
+                href = f'<a href="data:application/json;base64,{b64}" download="{filename.replace(".png", ".json")}">{filename} (JSON)</a>'
+                return href
+        else:
+            # Matplotlib figure
+            fig.savefig(buf, format='png', bbox_inches='tight')
+            buf.seek(0)
+            b64 = base64.b64encode(buf.read()).decode()
+            href = f'<a href="data:image/png;base64,{b64}" download="{filename}">{filename}</a>'
+            return href
+    except Exception as e:
+        # If all exports fail, return a message with a div-based visualization
+        if hasattr(fig, 'to_html'):
+            html_str = fig.to_html(include_plotlyjs='cdn')
+            return f"""
+            <div>
+                <p>Unable to create download for {filename}: {str(e)}</p>
+                <p>View plot in browser:</p>
+                {html_str}
+            </div>
+            """
+        return f'<div>Unable to create download for {filename}: {str(e)}</div>'
 
 def export_map_to_html(folium_map, filename):
     """

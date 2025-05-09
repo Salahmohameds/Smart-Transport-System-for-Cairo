@@ -463,21 +463,18 @@ def main():
             selected_hospital = st.selectbox("Select Hospital", hospital_names)
             target_hospital = selected_hospital.split(" - ")[0]
         
-        # Road quality preference
-        min_road_condition = st.slider("Minimum Road Condition", 1, 10, 6)
-        
         # Run algorithm
         if st.button("Find Emergency Route"):
             try:
                 with st.spinner("Calculating emergency route..."):
-                    # Run A* algorithm
+                    # Run A* algorithm - no minimum road condition
                     path, travel_time, path_edges, results = run_a_star(
                         G, 
                         emergency_id, 
                         target_hospital,
                         neighborhoods,
                         facilities,
-                        min_road_condition
+                        1  # Use lowest possible condition to always find a path
                     )
                 
                 if path:
@@ -551,7 +548,7 @@ def main():
                             else:
                                 st.error("Failed to save analysis.")
                 else:
-                    st.error("No suitable emergency route found. Try lowering the minimum road condition.")
+                    st.error("No suitable emergency route found. Please try a different location or hospital.")
             except Exception as e:
                 st.error(f"Error calculating emergency route: {str(e)}")
     
