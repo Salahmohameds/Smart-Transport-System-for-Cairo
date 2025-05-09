@@ -221,6 +221,9 @@ def main():
             destinations = [f"{n['id']} - {n['name']}" for n in neighborhoods] + [f"{f['id']} - {f['name']}" for f in facilities]
             destination = st.selectbox("Select Destination", destinations) 
             destination_id = destination.split(" - ")[0]
+            # Convert to integer if it's a neighborhood ID
+            if destination_id.isdigit():
+                destination_id = int(destination_id)
         
         # Run algorithm
         if st.button("Find Optimal Route"):

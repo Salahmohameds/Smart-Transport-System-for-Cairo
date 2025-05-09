@@ -373,8 +373,12 @@ def run_transit_optimization(total_buses, max_waiting_time, optimize_transfers):
                 "improvement": (peak_improvement + offpeak_improvement) / 2
             })
         
-        # Normalize transfer improvement
-        transfer_improvement = transfer_improvement / sum(len(tp["metro_lines"]) * len(tp["bus_routes"]) for tp in transfer_points)
+        # Normalize transfer improvement (prevent division by zero)
+        total_weights = sum(len(tp["metro_lines"]) * len(tp["bus_routes"]) for tp in transfer_points)
+        if total_weights > 0:
+            transfer_improvement = transfer_improvement / total_weights
+        else:
+            transfer_improvement = 0
     
     # Format results
     optimized_schedule = {"bus_allocation": allocation}
