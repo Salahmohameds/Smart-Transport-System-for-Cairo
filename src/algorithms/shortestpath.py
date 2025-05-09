@@ -115,12 +115,53 @@ def run_dijkstra(G, origin, destination, time_period, traffic_flows):
         avg_traffic_factor = sum(edge['traffic_factor'] for edge in path_edges) / len(path_edges)
         congestion_level = min(10, int(avg_traffic_factor * 5))
         
-        # Compare with other time periods
+        # Compare with other time periods (without recursion)
         time_comparison = {}
         for period in ["morning_peak", "afternoon", "evening_peak", "night"]:
-            # Recalculate for other time periods
-            period_path, period_time, _, _ = run_dijkstra(G, origin, destination, period, traffic_flows)
-            time_comparison[period] = period_time if period_path else float('inf')
+            if period == time_period:
+                # Already calculated for current period
+                time_comparison[period] = travel_time
+                continue
+                
+            # Create a temporary graph for this time period
+            period_graph = G.copy()
+            
+            # Update edge weights for this period
+            for u, v, data in period_graph.edges(data=True):
+                # Create a consistent key for the edge
+                edge_key = (str(u), str(v))
+                reversed_edge_key = (str(v), str(u))
+                
+                # Get original distance
+                distance = data.get('distance', 1.0)
+                
+                # Calculate traffic factor
+                traffic_factor = 1.0
+                if edge_key in road_id_map and road_id_map[edge_key] in traffic_flows:
+                    flow = traffic_flows[road_id_map[edge_key]].get(period, 0)
+                    capacity = data.get('capacity', 3000)
+                    v_c_ratio = flow / capacity if capacity > 0 else 1.0
+                    traffic_factor = 1.0 + 0.15 * (v_c_ratio ** 4)
+                elif reversed_edge_key in road_id_map and road_id_map[reversed_edge_key] in traffic_flows:
+                    flow = traffic_flows[road_id_map[reversed_edge_key]].get(period, 0)
+                    capacity = data.get('capacity', 3000)
+                    v_c_ratio = flow / capacity if capacity > 0 else 1.0
+                    traffic_factor = 1.0 + 0.15 * (v_c_ratio ** 4)
+                
+                # Consider road condition
+                condition = data.get('condition', 5)
+                condition_factor = 1.2 - (condition / 10)
+                
+                # Update weight
+                time_weight = distance / (60 * (1 / traffic_factor) * (1 / condition_factor)) * 60
+                period_graph[u][v]['weight'] = time_weight
+            
+            # Calculate shortest path for this period
+            try:
+                period_time = nx.shortest_path_length(period_graph, source=origin, target=destination, weight='weight')
+                time_comparison[period] = period_time
+            except (nx.NetworkXNoPath, nx.NodeNotFound):
+                time_comparison[period] = float('inf')
         
         # Create route details for display
         route_details = []

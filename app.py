@@ -231,53 +231,56 @@ def main():
                 st.error("Origin and destination must be different")
             else:
                 with st.spinner("Calculating optimal route..."):
-                    # Run Dijkstra with time-dependent weights
-                    path, travel_time, path_edges, results = run_dijkstra(
-                        G, 
-                        origin_id, 
-                        destination_id, 
-                        time_period,
-                        traffic_flows
-                    )
-                    
-                    if path:
-                        # Visualize the path on the map
-                        route_map = visualize_solution(neighborhoods, facilities, path_edges,
-                                                      highlight_nodes=[origin_id, destination_id],
-                                                      title=f"Optimal Route: {origin.split(' - ')[1]} to {destination.split(' - ')[1]}")
-                        st.subheader("Optimal Route")
-                        folium_static(route_map, width=1000, height=600)
-                        
-                        # Show results
-                        st.subheader("Results")
-                        col1, col2 = st.columns(2)
-                        
-                        with col1:
-                            st.metric("Travel Time", f"{travel_time:.1f} minutes")
-                            st.metric("Route Distance", f"{results['total_distance']:.1f} km")
-                        
-                        with col2:
-                            st.metric("Road Segments", len(path_edges))
-                            st.metric("Traffic Congestion", f"{results['congestion_level']}/10")
-                        
-                        # Compare with other time periods
-                        st.subheader("Time Comparison")
-                        comparison_data = results["time_comparison"]
-                        
-                        fig = px.bar(
-                            x=list(time_mapping.keys()),
-                            y=[comparison_data[tp] for tp in time_mapping.values()],
-                            labels={"x": "Time of Day", "y": "Travel Time (minutes)"}
+                    try:
+                        # Run Dijkstra with time-dependent weights
+                        path, travel_time, path_edges, results = run_dijkstra(
+                            G, 
+                            origin_id, 
+                            destination_id, 
+                            time_period,
+                            traffic_flows
                         )
-                        fig.update_layout(title="Travel Time Comparison by Time of Day")
-                        st.plotly_chart(fig)
                         
-                        # Show detailed route
-                        st.subheader("Route Details")
-                        route_details = results["route_details"]
-                        st.table(route_details)
-                    else:
-                        st.error("No path found between selected points")
+                        if path:
+                            # Visualize the path on the map
+                            route_map = visualize_solution(neighborhoods, facilities, path_edges,
+                                                          highlight_nodes=[origin_id, destination_id],
+                                                          title=f"Optimal Route: {origin.split(' - ')[1]} to {destination.split(' - ')[1]}")
+                            st.subheader("Optimal Route")
+                            folium_static(route_map, width=1000, height=600)
+                            
+                            # Show results
+                            st.subheader("Results")
+                            col1, col2 = st.columns(2)
+                            
+                            with col1:
+                                st.metric("Travel Time", f"{travel_time:.1f} minutes")
+                                st.metric("Route Distance", f"{results['total_distance']:.1f} km")
+                            
+                            with col2:
+                                st.metric("Road Segments", len(path_edges))
+                                st.metric("Traffic Congestion", f"{results['congestion_level']}/10")
+                            
+                            # Compare with other time periods
+                            st.subheader("Time Comparison")
+                            comparison_data = results["time_comparison"]
+                            
+                            fig = px.bar(
+                                x=list(time_mapping.keys()),
+                                y=[comparison_data[tp] for tp in time_mapping.values()],
+                                labels={"x": "Time of Day", "y": "Travel Time (minutes)"}
+                            )
+                            fig.update_layout(title="Travel Time Comparison by Time of Day")
+                            st.plotly_chart(fig)
+                            
+                            # Show detailed route
+                            st.subheader("Route Details")
+                            route_details = results["route_details"]
+                            st.table(route_details)
+                        else:
+                            st.error("No path found between selected points")
+                    except Exception as e:
+                        st.error(f"Error calculating route: {str(e)}")
     
     elif algorithm == "Emergency Response Planning (A*)":
         st.title("Emergency Response Planning")
@@ -306,16 +309,17 @@ def main():
         
         # Run algorithm
         if st.button("Find Emergency Route"):
-            with st.spinner("Calculating emergency route..."):
-                # Run A* algorithm
-                path, travel_time, path_edges, results = run_a_star(
-                    G, 
-                    emergency_id, 
-                    target_hospital,
-                    neighborhoods,
-                    facilities,
-                    min_road_condition
-                )
+            try:
+                with st.spinner("Calculating emergency route..."):
+                    # Run A* algorithm
+                    path, travel_time, path_edges, results = run_a_star(
+                        G, 
+                        emergency_id, 
+                        target_hospital,
+                        neighborhoods,
+                        facilities,
+                        min_road_condition
+                    )
                 
                 if path:
                     # Visualize the path on the map
@@ -323,8 +327,8 @@ def main():
                     hospital_name = next(f['name'] for f in facilities if f['id'] == hospital_id)
                     
                     route_map = visualize_solution(neighborhoods, facilities, path_edges,
-                                                 highlight_nodes=[emergency_id, hospital_id],
-                                                 title=f"Emergency Route to {hospital_name}")
+                                                highlight_nodes=[emergency_id, hospital_id],
+                                                title=f"Emergency Route to {hospital_name}")
                     st.subheader("Emergency Route")
                     folium_static(route_map, width=1000, height=600)
                     
@@ -362,6 +366,8 @@ def main():
                     st.table(route_details)
                 else:
                     st.error("No suitable emergency route found. Try lowering the minimum road condition.")
+            except Exception as e:
+                st.error(f"Error calculating emergency route: {str(e)}")
     
     elif algorithm == "Public Transit Optimization (DP)":
         st.title("Public Transit Optimization")
