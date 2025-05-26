@@ -15,30 +15,30 @@ def run_transit_optimization(total_buses, max_waiting_time, optimize_transfers):
     bus_routes = [
         {
             "id": "B1",
-            "route": "New Cairo - Downtown",
+            "route": "New Cairo - Downtown Cairo",
             "daily_passengers": 35000,
-            "stops": ["New Cairo", "Nasr City", "Heliopolis", "Downtown"],
+            "stops": ["New Cairo", "Nasr City", "Heliopolis", "Downtown Cairo"],
             "current_buses": 12
         },
         {
             "id": "B2",
-            "route": "6th October - Dokki - Downtown",
+            "route": "6th October City - Dokki - Downtown Cairo",
             "daily_passengers": 42000,
-            "stops": ["6th October", "Sheikh Zayed", "Mohandessin", "Dokki", "Downtown"],
+            "stops": ["6th October City", "Sheikh Zayed", "Mohandessin", "Dokki", "Downtown Cairo"],
             "current_buses": 15
         },
         {
             "id": "B3",
             "route": "Maadi - Zamalek - Mohandessin",
             "daily_passengers": 28000,
-            "stops": ["Maadi", "Downtown", "Zamalek", "Mohandessin"],
+            "stops": ["Maadi", "Downtown Cairo", "Zamalek", "Mohandessin"],
             "current_buses": 10
         },
         {
             "id": "B4",
-            "route": "Helwan - Maadi - Downtown",
+            "route": "Helwan - Maadi - Downtown Cairo",
             "daily_passengers": 32000,
-            "stops": ["Helwan", "Maadi", "Downtown"],
+            "stops": ["Helwan", "Maadi", "Downtown Cairo"],
             "current_buses": 11
         },
         {
@@ -59,28 +59,28 @@ def run_transit_optimization(total_buses, max_waiting_time, optimize_transfers):
             "id": "B7",
             "route": "Sheikh Zayed - Mohandessin",
             "daily_passengers": 18000,
-            "stops": ["Sheikh Zayed", "6th October", "Mohandessin"],
+            "stops": ["Sheikh Zayed", "6th October City", "Mohandessin"],
             "current_buses": 7
         },
         {
             "id": "B8",
-            "route": "Rehab - Heliopolis - Downtown",
+            "route": "Al Rehab - Heliopolis - Downtown Cairo",
             "daily_passengers": 22000,
-            "stops": ["Rehab", "Nasr City", "Heliopolis", "Downtown"],
+            "stops": ["Al Rehab", "Nasr City", "Heliopolis", "Downtown Cairo"],
             "current_buses": 8
         },
         {
             "id": "B9",
-            "route": "NAC - New Cairo - Nasr City",
+            "route": "New Administrative Capital - New Cairo - Nasr City",
             "daily_passengers": 15000,
-            "stops": ["NAC", "Rehab", "New Cairo", "Nasr City"],
+            "stops": ["New Administrative Capital", "Al Rehab", "New Cairo", "Nasr City"],
             "current_buses": 6
         },
         {
             "id": "B10",
-            "route": "Giza - Dokki - Downtown - Ramses",
+            "route": "Giza - Dokki - Downtown Cairo - Ramses Railway Station",
             "daily_passengers": 38000,
-            "stops": ["Giza", "Dokki", "Downtown", "Ramses"],
+            "stops": ["Giza", "Dokki", "Downtown Cairo", "Ramses Railway Station"],
             "current_buses": 14
         }
     ]
@@ -389,7 +389,8 @@ def run_transit_optimization(total_buses, max_waiting_time, optimize_transfers):
                 "route": route["id"],
                 "route_name": route["route"],
                 "daily_passengers": route["daily_passengers"],
-                "buses_allocated": allocation[route["id"]]
+                "buses_allocated": allocation[route["id"]],
+                "stops": route["stops"]  # Include stops in the results
             } for route in bus_routes
         ],
         "waiting_times": waiting_times,

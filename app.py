@@ -12,6 +12,7 @@ import base64
 import sys
 import time
 import random
+import json
 
 # Add src to the path to import modules
 sys.path.append(os.path.join(os.path.dirname(__file__)))
@@ -31,7 +32,21 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# User Authentication Functions
+def save_user_data():
+    """Save user data to file"""
+    try:
+        # Use the current directory for user_data.json
+        file_path = 'user_data.json'
+        
+        # Save the data with proper formatting
+        with open(file_path, 'w') as f:
+            json.dump(st.session_state.users, f, indent=4)
+            
+        return True
+    except Exception as e:
+        st.error(f"Error saving user data: {str(e)}")
+        return False
+
 def init_session_state():
     """Initialize session state variables for authentication"""
     if 'authenticated' not in st.session_state:
@@ -41,14 +56,45 @@ def init_session_state():
     if 'user_data' not in st.session_state:
         st.session_state.user_data = {}
     if 'users' not in st.session_state:
-        # Sample users for demo purposes
-        st.session_state.users = {
-            "admin": {"password": "admin123", "saved_analyses": {}, "preferences": {}},
-            "planner": {"password": "cairo123", "saved_analyses": {}, "preferences": {}},
-            "guest": {"password": "guest", "saved_analyses": {}, "preferences": {}}
-        }
+        # Initialize users with saved analyses from previous sessions
+        try:
+            # Use the current directory for user_data.json
+            file_path = 'user_data.json'
+            if os.path.exists(file_path):
+                with open(file_path, 'r') as f:
+                    st.session_state.users = json.load(f)
+            else:
+                # Sample users for demo purposes if no saved data exists
+                st.session_state.users = {
+                    "admin": {"password": "admin123", "saved_analyses": {}, "preferences": {}},
+                    "planner": {"password": "cairo123", "saved_analyses": {}, "preferences": {}},
+                    "guest": {"password": "guest", "saved_analyses": {}, "preferences": {}}
+                }
+                # Create the user_data.json file with initial data
+                try:
+                    with open(file_path, 'w') as f:
+                        json.dump(st.session_state.users, f, indent=4)
+                except Exception as e:
+                    st.error(f"Error creating user data file: {str(e)}")
+        except json.JSONDecodeError:
+            # If the file is corrupted, reinitialize with demo users
+            st.session_state.users = {
+                "admin": {"password": "admin123", "saved_analyses": {}, "preferences": {}},
+                "planner": {"password": "cairo123", "saved_analyses": {}, "preferences": {}},
+                "guest": {"password": "guest", "saved_analyses": {}, "preferences": {}}
+            }
+            # Try to recreate the file
+            try:
+                with open(file_path, 'w') as f:
+                    json.dump(st.session_state.users, f, indent=4)
+            except Exception as e:
+                st.error(f"Error recreating user data file: {str(e)}")
     if 'selected_algorithm' not in st.session_state:
         st.session_state.selected_algorithm = None
+    if 'save_status' not in st.session_state:
+        st.session_state.save_status = {'success': False, 'message': '', 'saved_name': None}
+    if 'current_analysis' not in st.session_state:
+        st.session_state.current_analysis = None
 
 def login_page():
     """Display login form and handle authentication"""
@@ -71,6 +117,14 @@ def login_page():
                 if username in st.session_state.users and st.session_state.users[username]["password"] == password:
                     st.session_state.authenticated = True
                     st.session_state.username = username
+                    # Load saved analyses from file
+                    try:
+                        with open('user_data.json', 'r') as f:
+                            saved_data = json.load(f)
+                            if username in saved_data and 'saved_analyses' in saved_data[username]:
+                                st.session_state.users[username]['saved_analyses'] = saved_data[username]['saved_analyses']
+                    except (FileNotFoundError, json.JSONDecodeError):
+                        pass
                     st.session_state.user_data = st.session_state.users[username]
                     st.rerun()
                 else:
@@ -86,21 +140,148 @@ def login_page():
 
 def save_analysis(analysis_name, algorithm, results):
     """Save current analysis to user data"""
-    if st.session_state.authenticated:
-        username = st.session_state.username
-        if 'saved_analyses' not in st.session_state.users[username]:
-            st.session_state.users[username]['saved_analyses'] = {}
+    if 'authenticated' not in st.session_state or not st.session_state.authenticated:
+        st.error("You need to be logged in to save the analysis.")
+        return False, None
+    
+    username = st.session_state.username
+    
+    # Add timestamp to analysis name to prevent overwriting
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if timestamp not in analysis_name:
+        analysis_name = f"{analysis_name} ({timestamp})"
+    
+    # Ensure all necessary fields are included in the results
+    if "Traffic Flow Optimization" in algorithm:
+        # For Dijkstra's algorithm, ensure we have all required fields
+        if 'route_details' in results:
+            # Calculate metrics from route details
+            total_distance = results.get('total_distance', 0)
+            travel_time = sum(float(step['Time (min)'].replace('min', '').strip()) 
+                            for step in results['route_details'] 
+                            if 'Time (min)' in step)
+            num_segments = len(results['route_details'])
+            avg_speed = (total_distance / (travel_time / 60)) if travel_time > 0 else 0
+            
+            # Create path edges from route details
+            path_edges = []
+            for step in results['route_details']:
+                # Extract node IDs from the step
+                from_node = step['From'].split(' - ')[0]
+                to_node = step['To'].split(' - ')[0]
+                
+                # Convert to integers if they are numeric
+                try:
+                    from_node = int(from_node)
+                except ValueError:
+                    pass
+                try:
+                    to_node = int(to_node)
+                except ValueError:
+                    pass
+                
+                # Create edge data
+                edge_data = {
+                    'from': from_node,
+                    'to': to_node,
+                    'distance': float(step['Distance (km)'].replace('km', '').strip()),
+                    'time': float(step['Time (min)'].replace('min', '').strip()),
+                    'traffic_factor': 1.3 if step['Traffic'] == 'Heavy' else 
+                                    1.1 if step['Traffic'] == 'Moderate' else 1.0
+                }
+                path_edges.append(edge_data)
+            
+            # Update results with all necessary fields
+            results.update({
+                'travel_time': travel_time,
+                'num_segments': num_segments,
+                'avg_speed': avg_speed,
+                'path_edges': path_edges  # Add path edges for visualization
+            })
+    elif "Emergency Response Planning" in algorithm:
+        # For A* algorithm, convert route_details to path_edges if needed
+        if 'route_details' in results and 'path_edges' not in results:
+            # The route_details in emergency response already has the correct format
+            results['path_edges'] = results['route_details']
         
         st.session_state.users[username]['saved_analyses'][analysis_name] = {
             "algorithm": algorithm,
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "timestamp": timestamp,
             "results": results
         }
         
         # Update session state
         st.session_state.user_data = st.session_state.users[username]
-        return True
-    return False
+    
+    # Save to file and check if successful
+    if save_user_data():
+        return True, analysis_name
+    else:
+        st.error("Failed to save analysis to file. Please try again.")
+        return False, None
+    return False, None
+
+def save_analysis_callback():
+    """Callback function for saving analysis"""
+    if st.session_state.analysis_name and st.session_state.current_analysis:
+        success, saved_name = save_analysis(
+            st.session_state.analysis_name,
+            st.session_state.current_analysis['algorithm'],
+            st.session_state.current_analysis['results']
+        )
+        if success:
+            st.session_state.save_status = {
+                'success': True,
+                'message': f"Analysis '{saved_name}' saved successfully!",
+                'saved_name': saved_name
+            }
+            # Update user data
+            if 'saved_analyses' not in st.session_state.users[st.session_state.username]:
+                st.session_state.users[st.session_state.username]['saved_analyses'] = {}
+            st.session_state.users[st.session_state.username]['saved_analyses'][saved_name] = st.session_state.current_analysis
+            st.session_state.user_data = st.session_state.users[st.session_state.username]
+            save_user_data()
+        else:
+            st.session_state.save_status = {
+                'success': False,
+                'message': "Failed to save analysis. Please make sure you're logged in.",
+                'saved_name': None
+            }
+
+def display_save_analysis_section(algorithm, results, default_name=None):
+    """Display a prominent save analysis section"""
+    st.markdown("---")
+    st.subheader("Save Analysis")
+    
+    # Store current analysis in session state
+    st.session_state.current_analysis = {
+        'algorithm': algorithm,
+        'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        'results': results
+    }
+    
+    # Create the save form
+    with st.form(key="save_analysis_form", clear_on_submit=False):
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.text_input(
+                "Analysis Name",
+                value=default_name or f"{algorithm} - {datetime.now().strftime('%Y-%m-%d')}",
+                key="analysis_name"
+            )
+        with col2:
+            st.form_submit_button(
+                "💾 Save to Profile",
+                use_container_width=True,
+                on_click=save_analysis_callback
+            )
+    
+    # Display save status
+    if st.session_state.save_status['message']:
+        if st.session_state.save_status['success']:
+            st.success(st.session_state.save_status['message'])
+        else:
+            st.error(st.session_state.save_status['message'])
 
 def create_data_description():
     st.markdown("""
@@ -131,6 +312,10 @@ def create_data_description():
 def main():
     # Initialize session state
     init_session_state()
+    
+    # Initialize saved analyses in session state if not exists
+    if 'saved_analyses' not in st.session_state:
+        st.session_state.saved_analyses = {}
     
     # Display login page if not authenticated
     if not st.session_state.authenticated:
@@ -185,6 +370,7 @@ def main():
     st.sidebar.write(f"**Logged in as:** {st.session_state.username}")
     if st.sidebar.button("Log Out"):
         st.session_state.authenticated = False
+        st.session_state.saved_analyses = {}  # Clear saved analyses on logout
         st.rerun()
     
     st.sidebar.markdown("---")
@@ -208,19 +394,21 @@ def main():
     st.sidebar.markdown("---")
     st.sidebar.subheader("Saved Analyses")
     
+    # Combine session state saved analyses with user data saved analyses
+    all_saved_analyses = {}
     if st.session_state.user_data and 'saved_analyses' in st.session_state.user_data:
-        saved_analyses = st.session_state.user_data['saved_analyses']
-        if saved_analyses:
-            analysis_names = list(saved_analyses.keys())
-            selected_analysis = st.sidebar.selectbox("Select Analysis", analysis_names)
-            
-            if st.sidebar.button("Load Analysis"):
-                analysis_data = saved_analyses[selected_analysis]
-                st.sidebar.write(f"Loaded: {selected_analysis}")
-                st.sidebar.write(f"Created: {analysis_data['timestamp']}")
-                st.sidebar.write(f"Algorithm: {analysis_data['algorithm']}")
-        else:
-            st.sidebar.write("No saved analyses yet.")
+        all_saved_analyses.update(st.session_state.user_data['saved_analyses'])
+    all_saved_analyses.update(st.session_state.saved_analyses)
+    
+    if all_saved_analyses:
+        analysis_names = list(all_saved_analyses.keys())
+        selected_analysis = st.sidebar.selectbox("Select Analysis", analysis_names)
+        
+        if st.sidebar.button("Load Analysis"):
+            analysis_data = all_saved_analyses[selected_analysis]
+            st.sidebar.write(f"Loaded: {selected_analysis}")
+            st.sidebar.write(f"Created: {analysis_data['timestamp']}")
+            st.sidebar.write(f"Algorithm: {analysis_data['algorithm']}")
     else:
         st.sidebar.write("No saved analyses yet.")
     
@@ -312,14 +500,12 @@ def main():
                     st.markdown(export_map_to_html(mst_map, "mst_map.html"), unsafe_allow_html=True)
                     st.markdown(export_report_to_html("Infrastructure Network Design", results, "mst_report.html"), unsafe_allow_html=True)
                 
-                # Save analysis option
-                with st.expander("Save Analysis"):
-                    analysis_name = st.text_input("Analysis Name", value=f"MST Analysis - {datetime.now().strftime('%Y-%m-%d')}")
-                    if st.button("Save to Profile"):
-                        if save_analysis(analysis_name, "Infrastructure Network Design (MST)", results):
-                            st.success(f"Analysis '{analysis_name}' saved successfully!")
-                        else:
-                            st.error("Failed to save analysis.")
+                # Save analysis
+                display_save_analysis_section(
+                    "Infrastructure Network Design (MST)",
+                    results,
+                    f"MST Analysis - {datetime.now().strftime('%Y-%m-%d')}"
+                )
     
     elif algorithm == "Traffic Flow Optimization (Dijkstra)":
         st.title("Traffic Flow Optimization")
@@ -427,15 +613,12 @@ def main():
                                 st.markdown(export_plot_to_png(fig, "time_comparison.png"), unsafe_allow_html=True)
                                 st.markdown(export_report_to_html("Traffic Flow Optimization", results, "route_report.html"), unsafe_allow_html=True)
                             
-                            # Save analysis option
-                            with st.expander("Save Analysis"):
-                                analysis_name = st.text_input("Analysis Name", 
-                                                            value=f"Route {origin.split(' - ')[1]} to {destination.split(' - ')[1]} - {datetime.now().strftime('%Y-%m-%d')}")
-                                if st.button("Save to Profile"):
-                                    if save_analysis(analysis_name, "Traffic Flow Optimization (Dijkstra)", results):
-                                        st.success(f"Analysis '{analysis_name}' saved successfully!")
-                                    else:
-                                        st.error("Failed to save analysis.")
+                            # Save analysis
+                            display_save_analysis_section(
+                                "Traffic Flow Optimization (Dijkstra)",
+                                results,
+                                f"Route {origin.split(' - ')[1]} to {destination.split(' - ')[1]} - {datetime.now().strftime('%Y-%m-%d')}"
+                            )
                         else:
                             st.error("No path found between selected points")
                     except Exception as e:
@@ -537,16 +720,12 @@ def main():
                         st.markdown(export_plot_to_png(fig, "emergency_comparison.png"), unsafe_allow_html=True)
                         st.markdown(export_report_to_html("Emergency Response Planning", results, "emergency_report.html"), unsafe_allow_html=True)
                     
-                    # Save analysis option
-                    with st.expander("Save Analysis"):
-                        location_name = emergency_location.split(" - ")[1]
-                        analysis_name = st.text_input("Analysis Name", 
-                                                    value=f"Emergency Route from {location_name} - {datetime.now().strftime('%Y-%m-%d')}")
-                        if st.button("Save to Profile"):
-                            if save_analysis(analysis_name, "Emergency Response Planning (A*)", results):
-                                st.success(f"Analysis '{analysis_name}' saved successfully!")
-                            else:
-                                st.error("Failed to save analysis.")
+                    # Save analysis
+                    display_save_analysis_section(
+                        "Emergency Response Planning (A*)",
+                        results,
+                        f"Emergency Route from {emergency_location.split(' - ')[1]} - {datetime.now().strftime('%Y-%m-%d')}"
+                    )
                 else:
                     st.error("No suitable emergency route found. Please try a different location or hospital.")
             except Exception as e:
@@ -591,66 +770,49 @@ def main():
                         popup=popup_text
                     ).add_to(transit_map)
                 
-                # Add facilities with custom icons
-                for f in facilities:
-                    icon_color = 'darkblue'
-                    if f['type'] == 'Medical':
-                        icon_name = 'plus'
-                        icon_color = 'red'
-                    elif f['type'] == 'Educational':
-                        icon_name = 'book'
-                        icon_color = 'green'
-                    elif f['type'] == 'Transportation':
-                        icon_name = 'subway'
-                        icon_color = 'orange'
-                    else:
-                        icon_name = 'building'
-                    
-                    folium.Marker(
-                        location=[f['y'], f['x']],
-                        popup=f['name'],
-                        icon=folium.Icon(color=icon_color, icon=icon_name, prefix='fa')
-                    ).add_to(transit_map)
-                
                 # Add bus routes with line thickness based on buses allocated
                 for route_data in results["bus_allocation"]:
                     route_id = route_data["route"]
                     buses = route_data["buses_allocated"]
                     line_width = max(2, min(8, buses / 2))  # Scale line width based on buses allocated
                     
-                    # Get route coordinates from road network (simplified for demo)
-                    # In a real system, you would have actual route coordinates
-                    # Here we're simulating routes as lines between key neighborhoods
-                    if route_id == "Route1":
-                        coords = [[30.05, 31.20], [30.06, 31.25], [30.07, 31.30]]
-                    elif route_id == "Route2":
-                        coords = [[30.03, 31.22], [30.05, 31.25], [30.08, 31.28]]
-                    elif route_id == "Route3":
-                        coords = [[30.02, 31.18], [30.04, 31.23], [30.07, 31.25]]
-                    elif route_id == "Route4":
-                        coords = [[30.06, 31.19], [30.05, 31.25], [30.03, 31.29]]
-                    elif route_id == "Route5":
-                        coords = [[30.04, 31.30], [30.05, 31.25], [30.09, 31.22]]
-                    else:
-                        coords = [[30.05, 31.20], [30.05, 31.25], [30.05, 31.30]]
+                    # Get route coordinates from the route details in results
+                    route_coords = []
+                    route_stops = route_data.get("stops", [])  # Get stops from route data
                     
-                    folium.PolyLine(
-                        locations=coords,
-                        color='red',
-                        weight=line_width,
-                        opacity=0.8,
-                        popup=f"Route: {route_data['route_name']}, Buses: {buses}"
-                    ).add_to(transit_map)
+                    for stop_name in route_stops:
+                        # Search in neighborhoods
+                        stop = next((n for n in neighborhoods if n["name"] == stop_name), None)
+                        if stop:
+                            route_coords.append([stop["y"], stop["x"]])
+                    else:
+                            # Search in facilities
+                            stop = next((f for f in facilities if f["name"] == stop_name), None)
+                            if stop:
+                                route_coords.append([stop["y"], stop["x"]])
+                    
+                    if len(route_coords) >= 2:  # Only draw if we have at least 2 points
+                        folium.PolyLine(
+                            locations=route_coords,
+                            color='red',
+                            weight=line_width,
+                            opacity=0.8,
+                            popup=f"Route: {route_data['route_name']}<br>Buses: {buses}<br>Daily Passengers: {route_data['daily_passengers']:,}"
+                        ).add_to(transit_map)
                 
                 # Add transfer points if optimized
                 if optimize_transfers:
                     for transfer in results["transfer_points"]:
-                        folium.Marker(
-                            # Simulated location for demo purposes
-                            location=[30.04 + random.uniform(-0.02, 0.02), 31.25 + random.uniform(-0.05, 0.05)],
-                            popup=f"Transfer Point: {transfer['station']}<br>Metro Lines: {transfer['metro_lines']}<br>Bus Routes: {transfer['bus_routes']}",
-                            icon=folium.Icon(color='purple', icon='exchange', prefix='fa')
-                        ).add_to(transit_map)
+                        # Find the station location
+                        station_name = transfer["station"]
+                        station = next((f for f in facilities if f["name"] == station_name and f["type"] == "Transit Hub"), None)
+                        
+                        if station:
+                            folium.Marker(
+                                location=[station["y"], station["x"]],
+                                popup=f"Transfer Point: {transfer['station']}<br>Metro Lines: {transfer['metro_lines']}<br>Bus Routes: {transfer['bus_routes']}<br>Avg Waiting Time: {transfer['avg_waiting_after']:.1f} min",
+                                icon=folium.Icon(color='purple', icon='exchange', prefix='fa')
+                            ).add_to(transit_map)
                 
                 # Display the map
                 st.subheader("Transit Network Map")
@@ -722,15 +884,12 @@ def main():
                     st.markdown(export_plot_to_png(fig, "waiting_times_chart.png"), unsafe_allow_html=True)
                     st.markdown(export_report_to_html("Public Transit Optimization", results, "transit_report.html"), unsafe_allow_html=True)
                 
-                # Save analysis option
-                with st.expander("Save Analysis"):
-                    analysis_name = st.text_input("Analysis Name", 
-                                                value=f"Transit Optimization ({total_buses} buses) - {datetime.now().strftime('%Y-%m-%d')}")
-                    if st.button("Save to Profile"):
-                        if save_analysis(analysis_name, "Public Transit Optimization (DP)", results):
-                            st.success(f"Analysis '{analysis_name}' saved successfully!")
-                        else:
-                            st.error("Failed to save analysis.")
+                # Save analysis
+                display_save_analysis_section(
+                    "Public Transit Optimization (DP)",
+                    results,
+                    f"Transit Optimization ({total_buses} buses) - {datetime.now().strftime('%Y-%m-%d')}"
+                )
     
     elif algorithm == "Traffic Signal Optimization (Greedy)":
         st.title("Traffic Signal Optimization")
@@ -882,15 +1041,12 @@ def main():
                     st.markdown(export_plot_to_png(flow_fig, "traffic_flow_chart.png"), unsafe_allow_html=True)
                     st.markdown(export_report_to_html("Traffic Signal Optimization", results, "signal_report.html"), unsafe_allow_html=True)
                 
-                # Save analysis option
-                with st.expander("Save Analysis"):
-                    analysis_name = st.text_input("Analysis Name", 
-                                                value=f"Signal Timing for {selected_intersection_data['name']} - {datetime.now().strftime('%Y-%m-%d')}")
-                    if st.button("Save to Profile"):
-                        if save_analysis(analysis_name, "Traffic Signal Optimization (Greedy)", results):
-                            st.success(f"Analysis '{analysis_name}' saved successfully!")
-                        else:
-                            st.error("Failed to save analysis.")
+                # Save analysis
+                display_save_analysis_section(
+                    "Traffic Signal Optimization (Greedy)",
+                    results,
+                    f"Signal Timing for {selected_intersection_data['name']} - {datetime.now().strftime('%Y-%m-%d')}"
+                )
 
 if __name__ == "__main__":
     main()

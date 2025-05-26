@@ -151,15 +151,23 @@ def calculate_weather_impact_on_route(route_data, weather_conditions):
     
     Args:
         route_data: Dictionary with route information (distance, normal_time)
-        weather_conditions: Dictionary with weather conditions
+        weather_conditions: Dictionary with weather conditions or list of weather conditions for multi-day
         
     Returns:
         Dictionary with impact metrics
     """
-    # Extract weather impact factors
-    speed_reduction = weather_conditions['speed_reduction']
-    capacity_reduction = weather_conditions['capacity_reduction']
-    accident_risk = weather_conditions['accident_risk']
+    # Handle both single-day and multi-day weather conditions
+    if isinstance(weather_conditions, list):
+        # For multi-day simulation, use the worst-case weather conditions
+        worst_conditions = max(weather_conditions, key=lambda x: x['speed_reduction'])
+        speed_reduction = worst_conditions['speed_reduction']
+        capacity_reduction = worst_conditions['capacity_reduction']
+        accident_risk = worst_conditions['accident_risk']
+    else:
+        # For single-day analysis
+        speed_reduction = weather_conditions['speed_reduction']
+        capacity_reduction = weather_conditions['capacity_reduction']
+        accident_risk = weather_conditions['accident_risk']
     
     # Calculate new travel time based on speed reduction
     normal_time = route_data['normal_time']  # in minutes
@@ -176,6 +184,31 @@ def calculate_weather_impact_on_route(route_data, weather_conditions):
     peak_weather_time = normal_time * (1 + (congestion_factor - 1) * peak_hour_factor)
     peak_delay = peak_weather_time - normal_time
     
+    # Calculate visibility and capacity impacts
+    visibility = 100 * (1 - speed_reduction)  # Visibility as percentage
+    capacity = 100 * (1 - capacity_reduction)  # Capacity as percentage
+    
+    # Calculate risk factors
+    congestion_risk = min(100, 50 + (congestion_factor - 1) * 100)  # Scale congestion risk
+    infrastructure_risk = min(100, 30 + capacity_reduction * 100)  # Scale infrastructure risk
+    
+    # Generate recommendations based on conditions
+    recommendations = []
+    if speed_reduction > 0.15:  # Heavy rain/snow
+        recommendations.append("⚠️ High Risk: Consider postponing non-essential travel")
+        recommendations.append("🚗 Reduce speed and maintain extra following distance")
+    elif speed_reduction > 0.05:  # Light rain/snow
+        recommendations.append("⚠️ Moderate Risk: Allow extra travel time")
+        recommendations.append("🚗 Use headlights and maintain safe following distance")
+    
+    if capacity_reduction > 0.1:
+        recommendations.append("🚦 Expect increased congestion, especially during peak hours")
+    
+    if accident_risk > 2.0:
+        recommendations.append("🚨 High accident risk: Exercise extreme caution")
+    elif accident_risk > 1.5:
+        recommendations.append("⚠️ Elevated accident risk: Drive defensively")
+    
     return {
         'normal_time': normal_time,
         'weather_time': weather_time,
@@ -184,7 +217,12 @@ def calculate_weather_impact_on_route(route_data, weather_conditions):
         'peak_weather_time': peak_weather_time,
         'peak_delay': peak_delay,
         'peak_delay_percentage': (peak_delay / normal_time) * 100 if normal_time > 0 else 0,
-        'accident_risk_factor': accident_risk
+        'accident_risk': accident_risk,
+        'visibility': visibility,
+        'capacity': capacity,
+        'congestion_risk': congestion_risk,
+        'infrastructure_risk': infrastructure_risk,
+        'recommendations': recommendations
     }
 
 def simulate_weather_impact_on_network(routes, weather_conditions):
@@ -193,11 +231,55 @@ def simulate_weather_impact_on_network(routes, weather_conditions):
     
     Args:
         routes: Dictionary of routes with their normal conditions
-        weather_conditions: Dictionary with weather conditions
+        weather_conditions: Dictionary with weather conditions or list of weather conditions for multi-day
         
     Returns:
         Dictionary with network-wide metrics
     """
+    # Handle both single-day and multi-day weather conditions
+    if isinstance(weather_conditions, list):
+        # For multi-day simulation, calculate daily metrics
+        daily_metrics = []
+        for day_weather in weather_conditions:
+            day_impact = calculate_network_metrics(routes, day_weather)
+            daily_metrics.append({
+                'date': day_weather['date'],
+                'avg_delay': day_impact['total_delay'] / len(routes),
+                'max_delay': day_impact['max_delay_percentage'],
+                'weather_type': day_weather['weather_type']
+            })
+        
+        # Calculate overall metrics using the worst day
+        worst_day = max(weather_conditions, key=lambda x: x['speed_reduction'])
+        overall_impact = calculate_network_metrics(routes, worst_day)
+        
+        # Identify critical days (days with significant impact)
+        critical_days = [
+            {
+                'Date': metric['date'].strftime('%Y-%m-%d'),
+                'Weather': metric['weather_type'],
+                'Average Delay': f"{metric['avg_delay']:.1f} min",
+                'Max Delay': f"{metric['max_delay']:.1f}%"
+            }
+            for metric in daily_metrics
+            if metric['avg_delay'] > 10 or metric['max_delay'] > 20  # Thresholds for critical days
+        ]
+        
+        return {
+            'daily_metrics': daily_metrics,
+            'overall_metrics': {
+                'avg_delay': overall_impact['total_delay'] / len(routes),
+                'peak_delay': overall_impact['max_delay_percentage'],
+                'reliability_index': 100 - (overall_impact['network_delay_percentage'] / 2)  # Scale to 0-100
+            },
+            'critical_days': critical_days
+        }
+    else:
+        # For single-day analysis
+        return calculate_network_metrics(routes, weather_conditions)
+
+def calculate_network_metrics(routes, weather_conditions):
+    """Helper function to calculate network metrics for a single day"""
     route_impacts = {}
     total_delay = 0
     total_normal_time = 0
@@ -444,31 +526,7 @@ def display_weather_simulation(routes=None):
         # Recommendations
         st.subheader("Recommendations")
         
-        if worst_day['weather_type'] in ['heavy_rain', 'heavy_snow', 'fog']:
-            st.error("""
-            ### High-Risk Weather Ahead
-            
-            - Consider postponing non-essential travel on the worst weather day
-            - Implement emergency traffic management protocols
-            - Increase public transport frequency on key routes
-            - Activate road maintenance crews for rapid response
-            """)
-        elif worst_day['weather_type'] in ['light_rain', 'light_snow', 'strong_winds']:
-            st.warning("""
-            ### Moderate Weather Disruption Expected
-            
-            - Allow for extra travel time, especially during peak hours
-            - Monitor traffic conditions and provide real-time updates
-            - Ensure drainage systems are clear before rain events
-            - Consider speed reductions on high-risk road segments
-            """)
-        else:
-            st.success("""
-            ### Minimal Weather Disruption Expected
-            
-            - Standard traffic management should be sufficient
-            - Focus on regular maintenance activities
-            - Monitor for any unexpected weather changes
-            """)
+        for recommendation in network_impact['route_impacts'][network_impact['most_affected_route']]['recommendations']:
+            st.write(recommendation)
     
     return weather_conditions

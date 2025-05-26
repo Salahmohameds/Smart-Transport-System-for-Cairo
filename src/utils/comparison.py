@@ -64,12 +64,40 @@ def compare_routes(scenarios):
     comparison_data = []
     
     for name, results in scenarios.items():
+        # Calculate travel time from route details if not directly available
+        if 'travel_time' not in results:
+            if 'route_details' in results:
+                # For emergency routes, sum up the time from route details
+                travel_time = sum(segment['time'] for segment in results['route_details'])
+            else:
+                travel_time = 0
+        else:
+            travel_time = results['travel_time']
+        
+        # Calculate number of segments
+        if 'num_segments' not in results:
+            if 'route_details' in results:
+                num_segments = len(results['route_details'])
+            else:
+                num_segments = 0
+        else:
+            num_segments = results['num_segments']
+        
+        # Calculate average speed
+        if 'avg_speed' not in results:
+            if results['total_distance'] > 0 and travel_time > 0:
+                avg_speed = (results['total_distance'] / (travel_time / 60))  # Convert to km/h
+            else:
+                avg_speed = 0
+        else:
+            avg_speed = results['avg_speed']
+        
         comparison_data.append({
             "Scenario": name,
-            "Travel Time (min)": results["travel_time"],
-            "Distance (km)": results["total_distance"],
-            "Road Segments": results["num_segments"],
-            "Avg Speed (km/h)": results["avg_speed"]
+            "Travel Time (min)": round(travel_time, 1),
+            "Distance (km)": round(results['total_distance'], 1),
+            "Road Segments": num_segments,
+            "Avg Speed (km/h)": round(avg_speed, 1)
         })
     
     # Create comparison dataframe

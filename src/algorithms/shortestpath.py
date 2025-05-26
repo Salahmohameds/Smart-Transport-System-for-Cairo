@@ -245,57 +245,23 @@ def run_a_star(G, emergency_location, target_hospital, neighborhoods, facilities
     # Step 2: Create a copy of the graph for emergency routing
     emergency_graph = G.copy()
     
-    # Step 3: First attempt - try with the specified min_road_condition
-    edges_to_remove = []
+    # Step 3: Apply road condition penalties instead of removing edges
     for u, v, data in emergency_graph.edges(data=True):
-        condition = data.get('condition', 0)
+        condition = data.get('condition', 5)
         if condition < min_road_condition:
-            edges_to_remove.append((u, v))
-    
-    # Check if removing edges would disconnect all paths to hospitals
-    temp_graph = emergency_graph.copy()
-    for u, v in edges_to_remove:
-        if (u, v) in temp_graph.edges():
-            temp_graph.remove_edge(u, v)
-    
-    # Check if a path still exists to any hospital
-    path_exists_with_conditions = False
-    reachable_hospital = None
-    
-    for hospital_id in hospital_ids:
-        try:
-            if nx.has_path(temp_graph, source=emergency_location, target=hospital_id):
-                path_exists_with_conditions = True
-                reachable_hospital = hospital_id
-                break
-        except Exception as e:
-            print(f"Temporary path check error: {str(e)}")
-            continue
-    
-    # If there's still a path with the condition check, use that graph
-    if path_exists_with_conditions:
-        # Safe to remove poor condition roads
-        for u, v in edges_to_remove:
-            if (u, v) in emergency_graph.edges():
-                emergency_graph.remove_edge(u, v)
-    else:
-        # Plan B: We need to keep some poor condition roads, but penalize them
-        for u, v, data in emergency_graph.edges(data=True):
-            condition = data.get('condition', 5)
-            if condition < min_road_condition:
-                # Apply a penalty instead of removing
+            # Apply a penalty based on road condition
                 penalty_factor = 1 + ((min_road_condition - condition) / 5)
                 if 'distance' in data:
                     emergency_graph[u][v]['distance'] *= penalty_factor
+                # Also store the original distance for travel time calculation
+                emergency_graph[u][v]['original_distance'] = data['distance']
     
     # If target hospital not specified, find nearest hospital
-    hospital_ids = ["F9", "F10"]  # IDs of hospitals in the dataset
     target_hospital_id = target_hospital
     
     if not target_hospital_id:
         # Use standard Dijkstra to find nearest hospital
         distances = {}
-        
         for hospital_id in hospital_ids:
             try:
                 # Check if there's a path to this hospital
@@ -384,7 +350,8 @@ def run_a_star(G, emergency_location, target_hospital, neighborhoods, facilities
                 # Get edge data
                 edge_data = emergency_graph[u][v]
                 
-                distance = edge_data.get('distance', 0)
+                # Use original distance for travel time calculation
+                distance = edge_data.get('original_distance', edge_data.get('distance', 0))
                 condition = edge_data.get('condition', 5)
                 
                 # Emergency vehicles can travel faster
@@ -411,79 +378,43 @@ def run_a_star(G, emergency_location, target_hospital, neighborhoods, facilities
                 total_time += time
                 total_condition += condition
             
-            # Compare with standard routing
-            # Use Dijkstra to find standard route
-            try:
-                std_path = nx.shortest_path(G, source=emergency_location, target=target_hospital_id, weight='distance')
-                std_distance = nx.shortest_path_length(G, source=emergency_location, target=target_hospital_id, weight='distance')
-                
-                # Calculate standard time (assume average 50 km/h speed for standard routing)
-                std_time = (std_distance / 50) * 60
-            except nx.NetworkXNoPath:
-                std_path = None
-                std_time = float('inf')
+            avg_road_condition = total_condition / len(path_edges) if path_edges else 0
             
-            # Create route details for display
-            route_details = []
-            for i, edge in enumerate(path_edges):
-                from_node = get_node_name(G, edge["from"])
-                to_node = get_node_name(G, edge["to"])
-                
-                route_details.append({
-                    "Step": i + 1,
-                    "From": from_node,
-                    "To": to_node,
-                    "Distance (km)": f"{edge['distance']:.1f}",
-                    "Time (min)": f"{edge['time']:.1f}",
-                    "Road Condition": f"{edge['condition']}/10"
-                })
+            # Calculate standard routing time for comparison
+            try:
+                standard_time = nx.shortest_path_length(emergency_graph, source=emergency_location, target=target_hospital_id, weight='distance') / 60
+            except nx.NetworkXNoPath:
+                standard_time = float('inf')
             
             # Prepare results
-            avg_condition = total_condition / len(path_edges) if path_edges else 0
-            
             results = {
-                "hospital_id": target_hospital_id,
                 "total_distance": total_distance,
-                "avg_road_condition": avg_condition,
-                "standard_time": std_time,
-                "route_details": route_details
+                "avg_road_condition": avg_road_condition,
+                "standard_time": standard_time,
+                "hospital_id": target_hospital_id,
+                "route_details": path_edges
             }
             
             return path, total_time, path_edges, results
         
-        # Check neighbors
+        # Explore neighbors
         for neighbor in emergency_graph.neighbors(current):
-            # Get edge data
+            # Calculate edge cost considering both distance and road condition
             edge_data = emergency_graph[current][neighbor]
-            
-            # Calculate tentative g_score
-            edge_weight = edge_data.get('distance', 1.0)
-            
-            # Adjust weight based on road condition (better roads are preferred)
+            distance = edge_data.get('distance', 0)
             condition = edge_data.get('condition', 5)
-            condition_factor = 2 - (condition / 10)  # Inverse relationship
             
-            adjusted_weight = edge_weight * condition_factor
+            # Calculate edge cost: distance * (1 + condition penalty)
+            # Better condition = lower cost
+            condition_penalty = (11 - condition) / 10  # 0 for condition 10, 1 for condition 1
+            edge_cost = distance * (1 + condition_penalty)
             
-            tentative_g = g_score[current] + adjusted_weight
+            tentative_g_score = g_score[current] + edge_cost
             
-            if tentative_g < g_score[neighbor]:
-                # This path is better
+            if tentative_g_score < g_score[neighbor]:
                 came_from[neighbor] = current
-                g_score[neighbor] = tentative_g
-                f_score[neighbor] = tentative_g + heuristic(neighbor)
-                
-                # Add to open set if not already there
-                found = False
-                for i, (f, n) in enumerate(open_set):
-                    if n == neighbor:
-                        found = True
-                        open_set[i] = (f_score[neighbor], neighbor)
-                        heapq.heapify(open_set)
-                        break
-                
-                if not found:
-                    heapq.heappush(open_set, (f_score[neighbor], neighbor))
+                g_score[neighbor] = tentative_g_score
+                f_score[neighbor] = g_score[neighbor] + heuristic(neighbor)
+                heapq.heappush(open_set, (f_score[neighbor], neighbor))
     
-    # No path found
-    return None, float('inf'), [], {"error": "No path found to hospital"}
+    return None, float('inf'), [], {"error": "No path found"}

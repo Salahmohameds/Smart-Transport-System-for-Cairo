@@ -1,0 +1,219 @@
+{
+    "admin": {
+        "password": "admin123",
+        "saved_analyses": {},
+        "preferences": {}
+    },
+    "planner": {
+        "password": "cairo123",
+        "saved_analyses": {},
+        "preferences": {}
+    },
+    "guest": {
+        "password": "guest",
+        "saved_analyses": {
+            "Emergency Route from Maadi - 2025-05-12": {
+                "algorithm": "Emergency Response Planning (A*)",
+                "timestamp": "2025-05-12 00:52:58",
+                "results": {
+                    "total_distance": 9.7,
+                    "avg_road_condition": 6.5,
+                    "standard_time": 0.16166666666666665,
+                    "hospital_id": "F9",
+                    "route_details": [
+                        {
+                            "from": 1,
+                            "to": 3,
+                            "distance": 8.5,
+                            "time": 4.722222222222222,
+                            "condition": 7,
+                            "road_type": "existing"
+                        },
+                        {
+                            "from": 3,
+                            "to": "F9",
+                            "distance": 1.2,
+                            "time": 0.6923076923076923,
+                            "condition": 6,
+                            "road_type": "existing"
+                        }
+                    ]
+                }
+            },
+            "Emergency Route from Maadi - 2025-05-12 (2025-05-12 00:55:09)": {
+                "algorithm": "Emergency Response Planning (A*)",
+                "timestamp": "2025-05-12 00:55:09",
+                "results": {
+                    "total_distance": 9.7,
+                    "avg_road_condition": 6.5,
+                    "standard_time": 0.16166666666666665,
+                    "hospital_id": "F9",
+                    "route_details": [
+                        {
+                            "from": 1,
+                            "to": 3,
+                            "distance": 8.5,
+                            "time": 4.722222222222222,
+                            "condition": 7,
+                            "road_type": "existing"
+                        },
+                        {
+                            "from": 3,
+                            "to": "F9",
+                            "distance": 1.2,
+                            "time": 0.6923076923076923,
+                            "condition": 6,
+                            "road_type": "existing"
+                        }
+                    ]
+                }
+            },
+            "Emergency Route from Heliopolis - 2025-05-12": {
+                "algorithm": "Emergency Response Planning (A*)",
+                "timestamp": "2025-05-12 00:55:19",
+                "results": {
+                    "total_distance": 7.3,
+                    "avg_road_condition": 6.5,
+                    "standard_time": 0.12166666666666666,
+                    "hospital_id": "F9",
+                    "route_details": [
+                        {
+                            "from": 5,
+                            "to": 3,
+                            "distance": 6.1,
+                            "time": 3.388888888888889,
+                            "condition": 7,
+                            "road_type": "existing"
+                        },
+                        {
+                            "from": 3,
+                            "to": "F9",
+                            "distance": 1.2,
+                            "time": 0.6923076923076923,
+                            "condition": 6,
+                            "road_type": "existing"
+                        }
+                    ]
+                }
+            },
+            "Route Maadi to New Cairo - 2025-05-12": {
+                "algorithm": "Traffic Flow Optimization (Dijkstra)",
+                "timestamp": "2025-05-12 01:00:02",
+                "results": {
+                    "total_distance": 29.6,
+                    "congestion_level": 5,
+                    "time_comparison": {
+                        "morning_peak": 12.510805641362182,
+                        "afternoon": 11.266404673604022,
+                        "evening_peak": 12.143655403988731,
+                        "night": 11.175644443106313
+                    },
+                    "route_details": [
+                        {
+                            "Step": 1,
+                            "From": "Maadi",
+                            "To": "Downtown Cairo",
+                            "Distance (km)": "8.5",
+                            "Time (min)": "4.7",
+                            "Traffic": "Moderate"
+                        },
+                        {
+                            "Step": 2,
+                            "From": "Downtown Cairo",
+                            "To": "Nasr City",
+                            "Distance (km)": "5.9",
+                            "Time (min)": "2.7",
+                            "Traffic": "Moderate"
+                        },
+                        {
+                            "Step": 3,
+                            "From": "Nasr City",
+                            "To": "New Cairo",
+                            "Distance (km)": "15.2",
+                            "Time (min)": "5.1",
+                            "Traffic": "Moderate"
+                        }
+                    ],
+                    "travel_time": 12.5,
+                    "num_segments": 3,
+                    "avg_speed": 142.08,
+                    "path_edges": [
+                        {
+                            "from": "Maadi",
+                            "to": "Downtown Cairo",
+                            "distance": 8.5,
+                            "time": 4.7,
+                            "traffic_factor": 1.1
+                        },
+                        {
+                            "from": "Downtown Cairo",
+                            "to": "Nasr City",
+                            "distance": 5.9,
+                            "time": 2.7,
+                            "traffic_factor": 1.1
+                        },
+                        {
+                            "from": "Nasr City",
+                            "to": "New Cairo",
+                            "distance": 15.2,
+                            "time": 5.1,
+                            "traffic_factor": 1.1
+                        }
+                    ]
+                }
+            },
+            "Route Nasr City to Cairo Festival City - 2025-05-12 (2025-05-12 17:13:55)": {
+                "algorithm": "Traffic Flow Optimization (Dijkstra)",
+                "timestamp": "2025-05-12 17:13:45",
+                "results": {
+                    "total_distance": 21.299999999999997,
+                    "congestion_level": 5,
+                    "time_comparison": {
+                        "morning_peak": 7.149274866553269,
+                        "afternoon": 6.478658145826245,
+                        "evening_peak": 6.933889056085272,
+                        "night": 6.393261376902608
+                    },
+                    "route_details": [
+                        {
+                            "Step": 1,
+                            "From": "Nasr City",
+                            "To": "New Cairo",
+                            "Distance (km)": "15.2",
+                            "Time (min)": "5.1",
+                            "Traffic": "Moderate"
+                        },
+                        {
+                            "Step": 2,
+                            "From": "New Cairo",
+                            "To": "Cairo Festival City",
+                            "Distance (km)": "6.1",
+                            "Time (min)": "2.0",
+                            "Traffic": "Moderate"
+                        }
+                    ],
+                    "travel_time": 7.1,
+                    "num_segments": 2,
+                    "avg_speed": 179.99999999999997,
+                    "path_edges": [
+                        {
+                            "from": "Nasr City",
+                            "to": "New Cairo",
+                            "distance": 15.2,
+                            "time": 5.1,
+                            "traffic_factor": 1.1
+                        },
+                        {
+                            "from": "New Cairo",
+                            "to": "Cairo Festival City",
+                            "distance": 6.1,
+                            "time": 2.0,
+                            "traffic_factor": 1.1
+                        }
+                    ]
+                }
+            }
+        },
+        "preferences": {}
+    }
+}

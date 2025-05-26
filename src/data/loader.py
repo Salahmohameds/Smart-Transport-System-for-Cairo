@@ -67,7 +67,10 @@ def load_data():
         {"from": "F1", "to": 2, "distance": 9.2, "capacity": 3200, "condition": 8},
         {"from": "F2", "to": 3, "distance": 2.5, "capacity": 2000, "condition": 7},
         {"from": "F7", "to": 15, "distance": 8.3, "capacity": 2800, "condition": 8},
-        {"from": "F8", "to": 4, "distance": 6.1, "capacity": 3000, "condition": 9}
+        {"from": "F8", "to": 4, "distance": 6.1, "capacity": 3000, "condition": 9},
+        {"from": "F9", "to": 3, "distance": 1.2, "capacity": 2000, "condition": 6},
+        {"from": "F10", "to": 10, "distance": 1.5, "capacity": 2000, "condition": 7},
+        {"from": "F9", "to": "F10", "distance": 2.1, "capacity": 1900, "condition": 7}
     ]
     
     # Define potential new roads from the dataset
